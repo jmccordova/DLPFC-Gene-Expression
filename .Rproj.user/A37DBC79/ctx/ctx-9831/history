@@ -1,0 +1,9 @@
+basedir <- "E:/jmcco/Downloads/GSE208338_RAW/CEL"
+setwd(basedir)
+# Bioconductor Installation
+if (!require("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+BiocManager::install(c("oligo", "pd.huex.1.0.st.v2"), lib = basedir)
+remove.packages('oligo')
+remove.packages('oligo', lib = "C:\Program Files\R\R-4.2.3\library")
+remove.packages('oligo', lib = "C:/Program Files/R/R-4.2.3/library")

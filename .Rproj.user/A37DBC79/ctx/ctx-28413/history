@@ -1,0 +1,164 @@
+basedir <- "E:/jmcco/Downloads/GSE208338_RAW/"
+setwd(basedir)
+# Bioconductor Installation
+if (!require("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+BiocManager::install(c("oligo", "pd.huex.1.0.st.v2"), force = TRUE, lib = paste(basedir, "lib", sep = ""))
+BiocManager::install(c("oligo", "pd.huex.1.0.st.v2"), force = TRUE, lib = paste(basedir, "lib", sep = ""))
+# check your package library path
+.libPaths()
+# grab old packages names
+old_packages <- installed.packages(lib.loc = "/Library/Frameworks/R.framework/Versions/3.6/Resources/library")
+old_packages <- as.data.frame(old_packages)
+list.of.packages <- unlist(old_packages$Package)
+# remove old packages
+remove.packages( installed.packages( priority = "NA" )[,1] )
+# reinstall all packages
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+lapply(list.of.packages,function(x){library(x,character.only=TRUE)})
+# Bioconductor Installation
+if (!require("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+BiocManager::install(c("oligo", "pd.huex.1.0.st.v2"), force = TRUE, lib = paste(basedir, "lib", sep = ""))
+# Bioconductor Installation
+if (!require("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+BiocManager::install(c("oligo", "pd.huex.1.0.st.v2"), force = TRUE, lib = paste(basedir, "lib", sep = ""))
+install.packages('BiocManager')
+install.packages("BiocManager")
+basedir <- "E:/jmcco/Downloads/GSE208338_RAW/"
+setwd(basedir)
+install.packages("BiocManager", lib = paste(basedir, "lib", sep = ""))
+install.packages("BiocManager", lib = paste(basedir, "lib", sep = ""))
+install.packages("BiocManager", lib = paste(basedir, "lib", sep = ""))
+BiocManager::install(c("oligo", "pd.huex.1.0.st.v2"), force = TRUE, lib = paste(basedir, "lib", sep = ""))
+basedir <- "E:/jmcco/Downloads/GSE208338_RAW/"
+#Set working directory to the the celfiles
+library(oligo)
+BiocManager::install(c("oligo", "pd.huex.1.0.st.v2"), force = TRUE, lib = paste(basedir, "lib", sep = ""))
+library(oligo)
+help("library")
+#Set working directory to the the celfiles
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""))
+BiocManager::install("BiocGenerics", force = TRUE, lib = paste(basedir, "lib", sep = ""))
+#Set working directory to the the celfiles
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""))
+library(BiocGenerics, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligoClasses, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""))
+library(Biobase, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligoClasses, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+library(Biostrings, lib.loc = paste(basedir, "lib", sep = ""))
+library(Biostrings, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+library(S4Vectors, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+library(Biostrings, lib.loc = paste(basedir, "lib", sep = ""))
+library(IRanges, lib.loc = paste(basedir, "lib", sep = ""))
+library(Biostrings, lib.loc = paste(basedir, "lib", sep = ""))
+library(XVector, lib.loc = paste(basedir, "lib", sep = ""))
+library(Biostrings, lib.loc = paste(basedir, "lib", sep = ""))
+library(GenomeInfoDb, lib.loc = paste(basedir, "lib", sep = ""))
+library(Biostrings, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+library(memoise, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+celFiles <- list.celfiles(paste(basedir, "CEL", sep = ""), full.names=TRUE)
+rawData <- read.celfiles(celFiles)
+dim(pm(rawData))
+annotation(rawData)
+dim(pData(ab))
+dim(pData(rawData))
+library(pd.huex.1.0.st.v2, lib.loc = paste(basedir, "lib", sep = ""))
+library(oligo, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+# Pre-processing
+# http://www.sthda.com/english/wiki/affymetrix-cel-files
+# Turn probe-level information to gene-level data by normalization using RMA
+e <- rma(rawData)
+e
+e$assayData
+sampleNames(e)
+assayData(e)
+dims(e)
+abstract(e)
+annotation(e)
+featureNames(e)
+phenoData(e)
+pData(e)
+e$index
+e$
+name
+e$experimentData
+exprs(e)
+exprs(rawData)
+View(rawData)
+View(e)
+e
+phenoData(e)
+experimentData(e)
+exprs(e)
+rawData
+View(rawData)
+View(rawData)
+View(rawData)
+help(rma)
+??rma
+exprs(e)
+dim(exprs(e))
+View(rawData)
+View(e)
+??glm
+affy::exprs(e)
+affy::exprs(rawData)
+affy::probeNames(rawData)
+affy::probeNames(exprs(rawData))
+annotation(rawData)
+affy::probeNames()
+affy::probeNames
+??probeNames
+affy::probeNames(featureData(e))
+featureData(e)
+featureData(rawData)
+featureNames(e)
+hist(e)
+hist(exprs(e))
+featureData(e)
+annotation(e
+)
+expression(e)[2315127,]
+expression(e)['2315127',]
+expression(e)
+exprs(e)
+exprs(e)[2315127,]
+exprs(e)['2315127',]
+exprs(e)['2315127','GSM6341321_9-060_HuEx-1_0-st-v2_.CEL']
+exprs(e)[,'GSM6341321_9-060_HuEx-1_0-st-v2_.CEL']
+exprs(e)[,'GSM6341321_9-060_HuEx-1_0-st-v2_.CEL'][2376922   ]
+exprs(e)[,'GSM6341321_9-060_HuEx-1_0-st-v2_.CEL'][2376922]
+exprs(e)[,'GSM6341321_9-060_HuEx-1_0-st-v2_.CEL']
+dims(exprs(e)[,'GSM6341321_9-060_HuEx-1_0-st-v2_.CEL'])
+exprs(e)
+featureData(e)
+featureNames(e)
+??dwt
+library("wavelets")
+BiocManager::install(c("wavelets"), force = TRUE, lib = paste(basedir, "lib", sep = ""))
+??dwt
+library(wavelet, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+library(wavelet)
+library(wavelet, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+basedir
+paste(basedir, "lib", sep = "")
+library(wavelets, lib.loc = paste(basedir, "lib", sep = ""), attach.required = TRUE)
+help(wavelets)
+help(dwt)
+help("wt.filter")
+rm(rawData)
+basedir <- "E:/jmcco/Downloads/GSE208338_RAW/"
+setwd(basedir)
+# Bioconductor Installation
+if (!require("BiocManager", quietly = TRUE))
+install.packages("BiocManager", lib = paste(basedir, "lib", sep = ""))
