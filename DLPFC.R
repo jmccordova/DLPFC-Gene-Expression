@@ -13,7 +13,7 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install(
   c("tzdb", "vroom", "readr", "affy", "caret", "e1071", "genefilter", "ggplot2", "locfit", "nnet", "oligo", 
-    "pd.huex.1.0.st.v2", "BiocGenerics", "withr", "corrr", "idm", "irlba", "PCAtools",
+    "pd.huex.1.0.st.v2", "BiocGenerics", "withr", "corrr", "idm", "irlba", "PCAtools", "RMTstat",
     "biomaRt", "pROC"), 
   force = TRUE, dependencies = TRUE, lib = package_loc
 )
@@ -44,6 +44,7 @@ library(corrr, lib.loc = package_loc)
 library(idm, lib.loc = package_loc)
 library(irlba, lib.loc = package_loc)
 library(PCAtools, lib.loc = package_loc)
+library(RMTstat, lib.loc = package_loc)
 library(biomaRt, lib.loc = package_loc)
 library(pROC, lib.loc = package_loc)
 
@@ -207,7 +208,29 @@ print(paste('Elbow:', elbow, '%Variation:', sum(data.pca$variance[1:elbow])))
 data.important <- data.pca$loadings[, 1:horn$n]
 write.csv(data.important, paste(datadir, "data.important.csv", sep = ""), row.names = TRUE)
 # Show the loadings
-plotloadings(data.pca, labSize = 3)
+# plotloadings(data.pca, labSize = 3)
+plotloadings(data.pca,
+             rangeRetain = 0.01,
+             labSize = 4.0,
+             title = 'Loadings plot',
+             subtitle = 'PC1, PC2, PC3, PC4, PC5',
+             caption = 'Top 1% variables',
+             shape = 24,
+             col = c('limegreen', 'black', 'red3'),
+             drawConnectors = TRUE)
+plotloadings(data.pca,
+             components = getComponents(data.pca, 1:elbow),
+             rangeRetain = 0.1,
+             labSize = 4.0,
+             absolute = FALSE,
+             title = 'Loadings plot',
+             subtitle = 'Misc PCs',
+             caption = 'Top 10% variables',
+             shape = 23, shapeSizeRange = c(1, 16),
+             col = c('white', 'pink'),
+             drawConnectors = FALSE)
+data.pca.vars <- getVars(data.pca)
+chooseMarchenkoPastur(data.t, var.explained=data.pca$sdev^2, noise=4)
 screeplot(data.pca,
   components = getComponents(data.pca, 1:20),
   vline = c(horn$n, elbow)) +
