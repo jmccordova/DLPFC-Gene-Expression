@@ -1,7 +1,0 @@
-{
-    "installOptions": {
-        "installFromRepository": true,
-        "libraryPath": "E:/jmcco/OneDrive - University of the Philippines/School/R",
-        "installDependencies": true
-    }
-}
