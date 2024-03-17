@@ -13,12 +13,19 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install(
   c("tzdb", "vroom", "readr", "affy", "ggplot2", 
-    "backports", "Hmisc", "ggcorrplot", "locfit", "nnet", "oligo", 
-    "pd.huex.1.0.st.v2", "BiocGenerics", "withr", "corrr", "idm", "irlba", "PCAtools", 
+    "backports", "Hmisc", "ggcorrplot", "locfit", "oligo", 
+    "pd.huex.1.0.st.v2", "BiocGenerics",
+    
+    # Part 3: Dimension Reduction
+    "withr", "corrr", "idm", "irlba", "PCAtools", 
     "RMTstat", "biomaRt", "pROC",
+    
+    # Part 4: Analysis
     "caret", "e1071", "lattice",  "naivebayes",
     "class", "gmodels", 
-    "rpart", "rpart.plot"), 
+    "rpart", "rpart.plot",
+    "nnet",
+    "randomForest"), 
   #force = TRUE, 
   dependencies = TRUE, 
   lib = package_loc
@@ -29,14 +36,23 @@ library(S4Vectors, lib.loc = package_loc); library(IRanges, lib.loc = package_lo
 library(backports, lib.loc = package_loc); library(Hmisc, lib.loc = package_loc); library(ggcorrplot, lib.loc = package_loc)
 library(BiocGenerics, lib.loc = package_loc)
 library(oligoClasses, lib.loc = package_loc); library(memoise, lib.loc = package_loc); library(pd.huex.1.0.st.v2, lib.loc = package_loc); library(oligo, lib.loc = package_loc, attach.required = TRUE)
-library(caret, lib.loc = package_loc); library(locfit, lib.loc = package_loc)
+
+# Part 2: Exploration
+library(psych, lib = package_loc)
+
+# Part 3: Dimension Reduction
+library(locfit, lib.loc = package_loc)
 library(corrr, lib.loc = package_loc); library(idm, lib.loc = package_loc); library(irlba, lib.loc = package_loc) 
 library(PCAtools, lib.loc = package_loc); library(RMTstat, lib.loc = package_loc); library(biomaRt, lib.loc = package_loc)
-library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); library(caret, lib.loc = package_loc); library(dplyr, lib.loc = package_loc)
-library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
+library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); 
+
+# Part 4: Analysis
+library(caret, lib.loc = package_loc); library(dplyr, lib.loc = package_loc); library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
 library(class, lib.loc = package_loc); library(gmodels, lib.loc = package_loc)
 library(parallel, lib.loc = package_loc); library(doParallel, lib.loc = package_loc)
 library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc)
+library(nnet, lib.loc = package_loc)
+library(randomForest, lib.loc = package_loc)
 
 '%ni%' <- Negate('%in%')  # define 'not in' func
 
@@ -84,3 +100,9 @@ names(transcriptIDs.missing) <- c('id_internal_huex', 'transcript_id')
 transcriptIDs <- rbind(transcriptIDs, transcriptIDs.missing)
 transcriptIDs <- arrange(transcriptIDs, id_internal_huex)
 remove(transcriptIDs.missing)
+
+# Part 2.5: Create a metadata array to be used for PCA
+data.pca.metadata <- matrix(c(transcriptIDs$id_internal_huex, transcriptIDs$transcript_id), nrow = 2, ncol = nrow(transcriptIDs), byrow = TRUE)
+data.pca.metadata <- data.frame(data.pca.metadata)
+names(data.pca.metadata) <- data.pca.metadata[1, ]
+data.pca.metadata <- data.pca.metadata[-1, ]

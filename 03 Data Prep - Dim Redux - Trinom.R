@@ -1,82 +1,5 @@
-# Part 2.5: Create a metadata array to be used for PCA
-data.pca.metadata <- matrix(c(transcriptIDs$id_internal_huex, transcriptIDs$transcript_id), nrow = 2, ncol = nrow(transcriptIDs), byrow = TRUE)
-data.pca.metadata <- data.frame(data.pca.metadata)
-names(data.pca.metadata) <- data.pca.metadata[1, ]
-data.pca.metadata <- data.pca.metadata[-1, ]
-
-# Part 3: Analysis
-# Part 3.1: Pre-processing
-# Part 3.1.1: Turn probe-level information to gene-level data by normalization using RMA
-# RMA - Robust Multi-Array Average (http://www.sthda.com/english/wiki/affymetrix-cel-files)
-# Returns ExpressionSet
-e <- rma(rawData)
-# Remove rawData variable to save space
-rm(rawData, celFiles)
-
-# Show details about the preprocessed values
-str(e)
-head(e)
-boxplot(e)
-
-# Part 3.1.2: Create factors for each diagnosis
-# Part 3.1.2.1: Replace string to integer classification
-# Diagnosis from each sample in GEO
-# CTL - 9, BPD - 1, MDD - 2, SCZ - 3
-diagnosis <- c(
-  # 299-309
-  9, 3, 2, 3, 1, 1, 2, 3, 3, 9, 3,
-  # 310-320
-  2, 1, 3, 9, 3, 2, 2, 1, 1, 9, 1,
-  # 321-331
-  1, 9, 1, 9, 1, 9, 9, 9, 3, 2, 9,
-  # 332-342
-  2, 9, 3, 2, 9, 2, 3, 9, 3, 2, 2,
-  # 343-353
-  9, 2, 9, 3, 9, 3, 3, 3, 3, 9, 3,
-  # 354-364
-  9, 9, 3, 9, 3, 3, 3, 9, 3, 9, 3,
-  # 365-375
-  3, 9, 9, 3, 9, 9, 9, 3, 3, 9, 3,
-  # 376-386
-  9, 3, 3, 9, 3, 3, 3, 3, 3, 9, 3,
-  # 387-397
-  9, 3, 3, 9, 3, 9, 3, 9, 3, 3, 3,
-  # 398-408
-  9, 9, 3, 3, 1, 9, 9, 9, 9, 2, 1,
-  # 409-419
-  9, 9, 2, 1, 9, 2, 1, 1, 3, 2, 1,
-  # 420-430
-  9, 3, 9, 3, 2, 3, 3, 2, 3, 3, 2,
-  # 431-441
-  3, 2, 3, 2, 3, 2, 3, 2, 9, 3, 2,
-  # 442-452
-  9, 9, 3, 9, 9, 3, 3, 9, 3, 9, 3,
-  # 453-463
-  3, 3, 9, 3, 9, 3, 9, 9, 9, 9, 9,
-  # 464-476
-  9, 9, 3, 3
-)
-# Part 3.1.2.2: Create factors for each diagnosis
-diagnosis.fact <- factor(diagnosis, ordered = FALSE)
-
-# Part 3.1.3: Get gene expressions
-gene_expressions <- exprs(e)
-data <- gene_expressions
-data <- t(data)
-data <- as.data.frame(data)
-print(paste("After RMA: ", paste(c("Samples: ", "Expressions: "), dim(data), collapse = " ")))
-# Append diagnosis.fact factors to the dataset
-data.multinomial <- data
-data.multinomial[, 'diagnosis'] <- diagnosis.fact
-
-# Part 3.1.4: Alpha computation
-# Perform Bonferroni correction
-get_alpha <- function(alpha_orig, n) {
-  return(alpha_orig/n)
-}
-alpha <- 0.05
-alpha <- get_alpha(alpha, ncol(data))
-
+# Part 3: Data Preparation
+# Part 3.1: Principal Component Analysis
 # Part 3.1.5: Dimension reduction using Principal Component Analysis
 # Step 3.1.5.1: Check for null values (If it returned more than 0, there is a null value)
 print(colSums(is.na(data))[colSums(is.na(data)) != 0])
@@ -148,6 +71,10 @@ biplot(data.pca, showLoadings = TRUE,
        labSize = 5, pointSize = 5, sizeLoadingsNames = 5)
 pairsplot(data.pca)
 
+# Part 3.2: Factor Analysis
+
+
+
 # Part 3.1.5: Splitting dataset
 ## For multinomial
 '%ni%' <- Negate('%in%')  # define 'not in' func
@@ -156,11 +83,4 @@ set.seed(100)
 index.multinomial <- createDataPartition(data.multinomial$diagnosis, p=0.75, list = F)
 trainset.multinomial <- data.multinomial[index.multinomial, ]
 testset.multinomial <- data.multinomial[-index.multinomial, ]
-
-# I.2.2. Data split
-# options(scipen=999)  # prevents printing scientific notations.
-# set.seed(100)
-# index <- createDataPartition(data_genefilter$withDisorder, p=0.75, list = F)
-# trainset <- data_genefilter[index, ]
-# testset <- data_genefilter[-index, ]
 
