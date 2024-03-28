@@ -12,13 +12,18 @@ if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager", lib = package_loc)
 
 BiocManager::install(
-  c("tzdb", "vroom", "readr", "affy", "ggplot2", 
+  c("tzdb", "vroom", "readr", "ggplot2", 
     "backports", "Hmisc", "ggcorrplot", "locfit", "oligo", 
     "pd.huex.1.0.st.v2", "BiocGenerics",
     
+    # Part 2: Explore
+    "ggpubr", "genefilter", "limma",
+    "multtest", "annaffy", "hgu95av2.db",
+    
     # Part 3: Dimension Reduction
     "withr", "corrr", "idm", "irlba", "PCAtools", 
-    "RMTstat", "biomaRt", "pROC",
+    "RMTstat", "biomaRt", "pROC", "nFactors",
+    "EFA.dimensions",
     
     # Part 4: Analysis
     "caret", "e1071", "lattice",  "naivebayes",
@@ -38,13 +43,15 @@ library(BiocGenerics, lib.loc = package_loc)
 library(oligoClasses, lib.loc = package_loc); library(memoise, lib.loc = package_loc); library(pd.huex.1.0.st.v2, lib.loc = package_loc); library(oligo, lib.loc = package_loc, attach.required = TRUE)
 
 # Part 2: Exploration
-library(psych, lib = package_loc)
+library(ggpubr, lib = package_loc); library(genefilter, lib = package_loc); library(limma, lib = package_loc)
+library(multtest, lib = package_loc); library(annaffy, lib = package_loc); library(hgu95av2.db, lib = package_loc)
 
 # Part 3: Dimension Reduction
 library(locfit, lib.loc = package_loc)
 library(corrr, lib.loc = package_loc); library(idm, lib.loc = package_loc); library(irlba, lib.loc = package_loc) 
 library(PCAtools, lib.loc = package_loc); library(RMTstat, lib.loc = package_loc); library(biomaRt, lib.loc = package_loc)
 library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); 
+library(EFA.dimensions, lib.loc = package_loc)
 
 # Part 4: Analysis
 library(caret, lib.loc = package_loc); library(dplyr, lib.loc = package_loc); library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
@@ -54,11 +61,14 @@ library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc
 library(nnet, lib.loc = package_loc)
 library(randomForest, lib.loc = package_loc)
 
-'%ni%' <- Negate('%in%')  # define 'not in' func
-
+# Initialize cores for parallel processing
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 clusterEvalQ(cluster, .libPaths("E:/jmcco/Downloads/BNF 300.2 Data/GSE208338_RAW/lib"))
+registerDoSEQ()
+on.exit(stopCluster(cluster))
+
+'%ni%' <- Negate('%in%')  # define 'not in' func
 
 # Part 2: Preparing data
 # Part 2.1: Get all Affymetrix CEL files from the directory
@@ -66,12 +76,6 @@ celFiles <- list.celfiles(paste(datadir, "CEL", sep = ""), full.names=TRUE)
 # Get the data from all CEL files
 # Returns ExonFeatureSet
 rawData <- read.celfiles(celFiles)
-# Part 2.2: Get information about the dataset
-str(rawData)
-head(rawData)
-dim(pm(rawData))
-# Platform used for gene information
-annotation(rawData)
 
 # Get the probe-level information of ExonFeatureSet
 # mm - mismatch matrix
@@ -87,22 +91,16 @@ get_matrix <- function(type, data) {
 }
 
 # Part 2.3: Get probe IDs
-ensemblIDs <- read_tsv(paste(probedir, 'Affymetrix_HuEx_microarray_probeset_IDs_to_Ensemble_IDs.tsv', sep = ''))
+ids.ensembl <- read_tsv(paste(probedir, 'Affymetrix_HuEx_microarray_probeset_IDs_to_Ensemble_IDs.tsv', sep = ''))
 # Part 2.4: Get unique gene IDs
-transcriptIDs <- ensemblIDs[c('id_internal_huex', 'transcript_id')]
-transcriptIDs <- transcriptIDs[!duplicated(transcriptIDs$id_internal_huex), ]
+ids.transcript <- ids.ensembl[c('id_internal_huex', 'transcript_id')]
+ids.transcript <- ids.transcript[!duplicated(ids.transcript$id_internal_huex), ]
 # Retain only the genes which probeset ID are found in the DLPFC dataset
-transcriptIDs <- transcriptIDs[transcriptIDs$id_internal_huex %in% colnames(data), ]
+ids.transcript <- ids.transcript[ids.transcript$id_internal_huex %in% unique(probeNames(rawData)), ]
 # Combine the probeIDs from DLPFC dataset that have no gene IDs
-transcriptIDs.missing <- colnames(data)[colnames(data) %ni% transcriptIDs$id_internal_huex]
-transcriptIDs.missing <- data.frame(matrix(c(transcriptIDs.missing, transcriptIDs.missing), ncol = 2))
-names(transcriptIDs.missing) <- c('id_internal_huex', 'transcript_id')
-transcriptIDs <- rbind(transcriptIDs, transcriptIDs.missing)
-transcriptIDs <- arrange(transcriptIDs, id_internal_huex)
-remove(transcriptIDs.missing)
-
-# Part 2.5: Create a metadata array to be used for PCA
-data.pca.metadata <- matrix(c(transcriptIDs$id_internal_huex, transcriptIDs$transcript_id), nrow = 2, ncol = nrow(transcriptIDs), byrow = TRUE)
-data.pca.metadata <- data.frame(data.pca.metadata)
-names(data.pca.metadata) <- data.pca.metadata[1, ]
-data.pca.metadata <- data.pca.metadata[-1, ]
+ids.transcript.missing <- unique(probeNames(rawData))[unique(probeNames(rawData)) %ni% ids.transcript$id_internal_huex]
+ids.transcript.missing <- data.frame(matrix(c(ids.transcript.missing, ids.transcript.missing), ncol = 2))
+names(ids.transcript.missing) <- c('id_internal_huex', 'transcript_id')
+ids.transcript <- rbind(ids.transcript, ids.transcript.missing)
+ids.transcript <- arrange(ids.transcript, id_internal_huex)
+remove(ids.transcript.missing)

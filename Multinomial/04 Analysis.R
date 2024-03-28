@@ -1,12 +1,5 @@
 # Part 4: Machine Learning
-
-# Part 3.1.4: Alpha computation
-# Perform Bonferroni correction
-get_alpha <- function(alpha_orig, n) {
-  return(alpha_orig/n)
-}
-alpha <- 0.05
-alpha <- get_alpha(alpha, ncol(data.multinomial - 1))
+alpha <- get_alpha(alpha, nrow(data - 1))
 
 # Part 4.1: Naive Bayes
 set.seed(100)
