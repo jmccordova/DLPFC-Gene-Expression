@@ -1,5 +1,5 @@
 # Part 4: Machine Learning
-alpha <- get_alpha(alpha, nrow(data - 1))
+alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
 
 # Part 4.1: Naive Bayes
 set.seed(100)

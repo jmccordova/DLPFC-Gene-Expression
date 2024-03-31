@@ -23,7 +23,8 @@ BiocManager::install(
     # Part 3: Dimension Reduction
     "withr", "corrr", "idm", "irlba", "PCAtools", 
     "RMTstat", "biomaRt", "pROC", "nFactors",
-    "EFA.dimensions",
+    "EFA.dimensions", 
+    "corrplot", "factoextra",
     
     # Part 4: Analysis
     "caret", "e1071", "lattice",  "naivebayes",
@@ -36,9 +37,9 @@ BiocManager::install(
   lib = package_loc
 )
 
-library(Biobase, lib.loc = package_loc); library(tzdb, lib.loc = package_loc); library(vroom, lib.loc = package_loc); library(readr, lib.loc = package_loc)
+library(Biobase, lib.loc = package_loc); library(BiocSingular, lib.loc = package_loc); library(tzdb, lib.loc = package_loc); library(vroom, lib.loc = package_loc); library(readr, lib.loc = package_loc)
 library(S4Vectors, lib.loc = package_loc); library(IRanges, lib.loc = package_loc); library(XVector, lib.loc = package_loc); library(GenomeInfoDb, lib.loc = package_loc); library(Biostrings, lib.loc = package_loc)
-library(backports, lib.loc = package_loc); library(Hmisc, lib.loc = package_loc); library(ggcorrplot, lib.loc = package_loc)
+library(backports, lib.loc = package_loc); library(ggcorrplot, lib.loc = package_loc)
 library(BiocGenerics, lib.loc = package_loc)
 library(oligoClasses, lib.loc = package_loc); library(memoise, lib.loc = package_loc); library(pd.huex.1.0.st.v2, lib.loc = package_loc); library(oligo, lib.loc = package_loc, attach.required = TRUE)
 
@@ -49,9 +50,10 @@ library(multtest, lib = package_loc); library(annaffy, lib = package_loc); libra
 # Part 3: Dimension Reduction
 library(locfit, lib.loc = package_loc)
 library(corrr, lib.loc = package_loc); library(idm, lib.loc = package_loc); library(irlba, lib.loc = package_loc) 
-library(PCAtools, lib.loc = package_loc); library(RMTstat, lib.loc = package_loc); library(biomaRt, lib.loc = package_loc)
+library(PCAtools, lib.loc = package_loc); library(RMTstat, lib.loc = package_loc); library(biomaRt, lib.loc = package_loc); library(cowplot, lib.loc = package_loc); library(ggplotify, lib.loc = package_loc)
 library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); 
 library(EFA.dimensions, lib.loc = package_loc)
+library(corrplot, lib.loc = package_loc); library(factoextra, lib.loc = package_loc)
 
 # Part 4: Analysis
 library(caret, lib.loc = package_loc); library(dplyr, lib.loc = package_loc); library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
@@ -60,6 +62,7 @@ library(parallel, lib.loc = package_loc); library(doParallel, lib.loc = package_
 library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc)
 library(nnet, lib.loc = package_loc)
 library(randomForest, lib.loc = package_loc)
+library(Hmisc, lib.loc = package_loc); 
 
 # Initialize cores for parallel processing
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS

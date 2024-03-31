@@ -25,9 +25,13 @@
   str(e)
   head(e)
   
-  # Part 3.1.3: Get gene expressions
+  # Part 2.8: Rename the columns of exprs(e)
+  colnames.e <- colnames(e)
+  for (i in 1:length(colnames.e)) {
+    colnames.e[i] <- strsplit(colnames.e[i], split = "_")[[1]][1]
+  }
+  colnames(e) <- colnames.e
   data <- as.data.frame(exprs(e))
-  remove(e)
   
   # Part 2.8: View data as box and whiskers
   boxplot(data)

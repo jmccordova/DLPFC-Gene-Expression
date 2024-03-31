@@ -25,149 +25,133 @@
     diagnosis.fact.named[which(diagnosis.fact.named == 3)] <- "SCZ"
     diagnosis.fact.named[which(diagnosis.fact.named == 9)] <- "CTL"
     data.pp.diagnosed <- data.pp[, which(diagnosis.fact.named != "CTL")]
-    # The below is not useful since these diseases are not progression but different types
-    #design.ma <- model.matrix(~ 0 + factor(diagnosis.fact.named[diagnosis.fact.named != "CTL"]))
-    #colnames(design.ma) <- c("BPD","MDD","SCZ")
-    #fit <- lmFit(data.pp.diagnosed, design.ma)
-    #fit <- eBayes(fit)
-    #toptab <- topTable(fit, coef=2,5,adjust.method="fdr")
-    #print(toptab[,1:5],digits=4)
-    #cont.ma <- makeContrasts(BPD-MDD, MDD-SCZ, levels=factor(diagnosis.fact.named[diagnosis.fact.named != "CTL"]))
-    # End
-    #panova <- apply(exprs(data.pp.diagnosed), 1, function(x) anova(lm(x ~ factor(diagnosis.fact.named[diagnosis.fact.named != "CTL"])))$Pr[1])
-    #genenames <- featureNames(data.pp.diagnosed)[panova < 0.000001]
+    
     panova <- apply(exprs(data.pp), 1, function(x) anova(lm(x ~ diagnosis.fact))$Pr[1])
     features.gf.3 <- featureNames(data.pp)[panova < alpha]
-    atab <- aafTableAnn(features.gf.3, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
-    saveHTML(atab, file=paste(datadir, "Export/ANOVA Probe Names.html", sep = ""))
-    remove(panova, atab)
+    remove(panova, data.pp.diagnosed)
+  
+    # Part 3.1.4: Combine similar features
+    features.gf <- Reduce(intersect, List(features.gf.1, features.gf.2, features.gf.3))
+      # Part 3.1.4.1: Put to HTML the names of the features
+      atab <- aafTableAnn(features.gf, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
+      saveHTML(atab, file=paste(datadir, "Export/Gene Filtering Probe Names.html", sep = ""))
+    # Part 3.1.5: Create a correlation matrix across each features
+    features.gf.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.gf, ])))
+    corrplot(features.gf.corr$r)
+    
+  # Part 3.2: Principal Component Analysis
+    # Step 3.2.1: Check for null values (If it returned more than 0, there is a null value)
+    print(colSums(is.na(exprs(data.pp)))[colSums(is.na(exprs(data.pp))) != 0])
+    # Step 3.2.3: Perform PCA
+    model.pca <- pca(exprs(data.pp), removeVar = 0.1)
+    # Step 3.2.4: Determine optimum number of PCs 
+      # Step 3.2.4.1: Horn's method
+      pca.loadings.horn <- parallelPCA(exprs(data.pp))
+      # Step 3.2.4.2: Find the elbow point
+      pca.loadings.elbow <- findElbowPoint(model.pca$variance)
+      # Step 3.2.4.3: Get the PCs with that can explain at least 50% of the variability
+      print(paste('Number of PCs to consider:'))
+      print(paste('Horn:', pca.loadings.horn$n, '%Varation:', sum(model.pca$variance[1:pca.loadings.horn$n])))
+      print(paste('Elbow:', pca.loadings.elbow, '%Variation:', sum(model.pca$variance[1:pca.loadings.elbow])))
+      pca.loadings.min <- min(pca.loadings.horn$n, pca.loadings.elbow)
+    # Step 3.2.5: Get the loadings
+    model.pca.important <- as.data.frame(model.pca$loadings[, 1:pca.loadings.min])
+    # Step 3.2.6: Export
+    write.csv(model.pca.important, paste(datadir, "../Export/model.pca.important.csv", sep = ""), row.names = TRUE)
+    # Step 3.2.7: Visualize PCA
+      # Step 3.2.7.1: Scree plot to see where to cut the data
+      screeplot(model.pca,
+                components = getComponents(model.pca, 1:20),
+                vline = c(pca.loadings.horn$n, pca.loadings.elbow)) +
+      geom_label(aes(x = pca.loadings.horn$n + 1, y = 50,
+                label = 'Horn\'s', vjust = -1, size = 8)) +
+      geom_label(aes(x = pca.loadings.elbow + 1, y = 50,
+                label = 'Elbow method', vjust = -1, size = 8))
+      # Step 3.2.7.2: Pairs plot to compare one PC against another across all 5 PCs.
+      pairsplot(model.pca)
+      # Step 3.2.7.3: Biplot
+      biplot(model.pca, showLoadings = TRUE, labSize = 5, pointSize = 5, sizeLoadingsNames = 5)
+      # Step 3.2.7.4: Top 1%
+      plotloadings(model.pca,
+                   rangeRetain = 0.01,
+                   labSize = 4.0,
+                   title = 'Loadings plot',
+                   subtitle = 'PC1, PC2, PC3, PC4, PC5',
+                   caption = 'Top 1% variables',
+                   shape = 24,
+                   col = c('limegreen', 'black', 'red3'),
+                   drawConnectors = TRUE)
+      # Step 3.2.7.5: Top 10%
+      features.pca.1 <- plotloadings(model.pca,
+                   components = getComponents(model.pca, 1:pca.loadings.min),
+                   rangeRetain = 0.1,
+                   labSize = 4.0,
+                   absolute = FALSE,
+                   title = 'Loadings plot',
+                   subtitle = 'Misc PCs',
+                   caption = 'Top 10% variables',
+                   shape = 23, shapeSizeRange = c(1, 16),
+                   col = c('white', 'pink'),
+                   drawConnectors = FALSE)
+      # Step 3.2.7.6: Get the features of Top 10%
+      features.pca.1 <- features.pca.1$data$var
+    # Step 3.2.8: Transform to prcomp
+    #model.pca.prcomp <- BiocSingular::runPCA(t(exprs(e)), rank = pca.loadings.min, scale = TRUE)
+    model.pca.prcomp <- list(sdev = model.pca$sdev,
+                          rotation = data.matrix(model.pca$loadings),
+                          x = data.matrix(model.pca$rotated),
+                          center = TRUE, scale = TRUE
+                        )
+    class(model.pca.prcomp) <- 'prcomp'
+    # Step 3.2.9: Visualization of PCs
+      # Step 3.2.9.1: Graph of individuals. Individuals with a similar profile are grouped together.
+      fviz_pca_ind(model.pca.prcomp,
+                    label="ind", 
+                    habillage=diagnosis.fact.named,
+                    addEllipses=TRUE, 
+                    ellipse.level=0.95,
+                    repel = TRUE
+                  )
+      # Step 3.2.9.2: Graph of variables. Positive correlated variables point to the same side of the plot. Negative correlated variables point to opposite sides of the graph.
+      features.pca.2 <- fviz_pca_var(model.pca.prcomp, 
+                   alpha.var="contrib",
+                   col.var = "red3",
+                   repel = TRUE,
+                   select.var = list(contrib = round(nrow(data.pp) * 0.01)),
+                   ) + theme_minimal()
+      features.pca.2 <- as.character(features.pca.2$data[1:round(nrow(data.pp) * 0.01), 'name'])
+      # Step 3.2.9.3: Biplot of individuals and variables
+      fviz_pca_biplot(model.pca.prcomp, repel = TRUE,
+                      col.var = "#2E9FDF", # Variables color
+                      col.ind = "#696969",  # Individuals color,
+                      select.var = list(contrib = round(nrow(data.pp) * 0.01))
+      )
+    # Step 3.2.10: For each of the principal component, get the variable with highest magnitude of eigenvalues
+    features.pca <- Reduce(intersect, List(features.pca.1, features.pca.2))
+      # Part 3.2.10.1: Put to HTML the names of the features
+      atab <- aafTableAnn(features.pca, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
+      saveHTML(atab, file=paste(datadir, "Export/PCA Probe Names.html", sep = ""))
+      # Part 3.2.10.2: Create a correlation matrix across each features
+      features.pca.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.pca, ])))
+      corrplot(features.pca.corr$r)
     
     
-  # Part 3.1: Principal Component Analysis
-    # Part 3.1.5: Dimension reduction using Principal Component Analysis
-      # Step 3.1.5.1: Check for null values (If it returned more than 0, there is a null value)
-      print(colSums(is.na(data))[colSums(is.na(data)) != 0])
-      # Step 3.1.5.2: Normalize data
-      # data.normalized <- scale(data)
-      data.normalized <- apply(data, 2, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y)))
-      # Step 3.1.5.3: Compute correlation matrix
-      corr_matrix <- cor(data.normalized)
-        # Step 3.1.5.3.1: Visualize the correlation matrix
-        qgraph(corr_matrix, minimum = 0.25, cut = 0.4, vsize = 2, legend = TRUE, borders = FALSE)
-      # Step 3.1.5.4: Computer covariance matrix
-      cov_matrix <- cov(data.normalized)
-        # Step 3.1.5.4.1: Check if there are NaN in covariance matrix
-        print(any(is.nan(cov_matrix)))
-      # Step 3.1.5.5: Apply PCA
-        # Step 3.1.5.5.1: Transpose the data first so the probe IDs are the rows
-        data.t <- data.frame(t(data))
-        #rownames(data.t) <- transcriptIDs$transcript_id[match(rownames(data.t), transcriptIDs$id_internal_huex)]
-        # Step 3.1.5.5.2: Check if the data rows and metadata columns match names
-        all(rownames(data.t) %in% colnames(data.pca.metadata))
-        all(rownames(data.t) == colnames(data.pca.metadata))
-        # Step 3.1.5.5.3: Perform PCA
-        #data.pca <- pca(data.t, metadata = data.pca.metadata, removeVar = 0.1)
-        data.pca <- pca(data.t, removeVar = 0.1)
-        # Step 3.1.5.5.4: Determine optimum number of PCs using Horn's method
-        horn <- parallelPCA(data.t)
-        # Step 3.1.5.5.5: Find the elbow point
-        elbow <- findElbowPoint(data.pca$variance)
-        # Get the PCs with that can explain at least 50% of the variability
-        print(paste('Number of PCs to consider:'))
-        print(paste('Horn:', horn$n, '%Varation:', sum(data.pca$variance[1:horn$n])))
-        print(paste('Elbow:', elbow, '%Variation:', sum(data.pca$variance[1:elbow])))
-        # Step 3.1.5.5.6: Put the important PCAs in a CSV
-        data.important <- data.pca$loadings[, 1:horn$n]
-        write.csv(data.important, paste(datadir, "data.important.csv", sep = ""), row.names = TRUE)
-        # Step 3.1.5.5.7: Visualize the loadings
-        plotloadings(data.pca,
-                     rangeRetain = 0.01,
-                     labSize = 4.0,
-                     title = 'Loadings plot',
-                     subtitle = 'PC1, PC2, PC3, PC4, PC5',
-                     caption = 'Top 1% variables',
-                     shape = 24,
-                     col = c('limegreen', 'black', 'red3'),
-                     drawConnectors = TRUE)
-        plotloadings(data.pca,
-                     components = getComponents(data.pca, 1:elbow),
-                     rangeRetain = 0.1,
-                     labSize = 4.0,
-                     absolute = FALSE,
-                     title = 'Loadings plot',
-                     subtitle = 'Misc PCs',
-                     caption = 'Top 10% variables',
-                     shape = 23, shapeSizeRange = c(1, 16),
-                     col = c('white', 'pink'),
-                     drawConnectors = FALSE)
-        screeplot(data.pca,
-          components = getComponents(data.pca, 1:20),
-          vline = c(horn$n, elbow)) +
-          geom_label(aes(x = horn$n + 1, y = 50,
-            label = 'Horn\'s', vjust = -1, size = 8)) +
-          geom_label(aes(x = elbow + 1, y = 50,
-            label = 'Elbow method', vjust = -1, size = 8)
-        )
+  # Step 3.3: Combine the features from Gene Filtering and PCA
+    features <- unique(append(features.gf, features.pca))
 
-        biplot(data.pca, showLoadings = TRUE,
-               labSize = 5, pointSize = 5, sizeLoadingsNames = 5)
-        pairsplot(data.pca)
-
-# Part 3.2: Factor Analysis
-nScree(cov(data))
-data.corr <- foreach(i = seq_len(ncol(data)),
-             .combine = rbind,
-             .multicombine = TRUE,
-             .inorder = FALSE,
-             .packages = c('data.table', 'doParallel')) %dopar% {
-                print(i)
-                cor(data[,i], data, method = 'pearson')
-             }
-write.csv(data.corr, file = paste(datadir, '../Export/corr_matrix.csv', sep = ''), row.names = TRUE)
-data.eigen <- foreach(i = seq_len(ncol(data)),
-             .combine = rbind,
-             .multicombine = TRUE,
-             .inorder = FALSE,
-             .packages = c('data.table', 'doParallel')) %dopar% {
-               print(i)
-               cor(data[,i], data, method = 'pearson')
-             }
-eigen(data.corr)
-
-
-
-raw <- RAWPAR(data, 
-            randtype = "permuted", 
-            extraction = "PCA", 
-            Ndatasets = round(nrow(data) * 0.25),
-            percentile = 95, 
-            corkind = "pearson", 
-            corkindRAND = NULL, 
-            Ncases = NULL, 
-            verbose = TRUE
-          )
-
-
-data.factors.n <- raw$values
-# Using kaiser method, get eigen > 1
-factanal(data, factors=data.factors.n, rotation="varimax") 
-factanal(data, factors=data.factors.n, rotation="oblimin")
-factanal(data, factors=data.factors.n, rotation="none")
-
-
-
-
-
-
-
-
-
-# Part 3.1.5: Splitting dataset
-## For multinomial
-'%ni%' <- Negate('%in%')  # define 'not in' func
-options(scipen=999)  # prevents printing scientific notations.
-set.seed(100)
-index.multinomial <- createDataPartition(data.multinomial$diagnosis, p=0.75, list = F)
-trainset.multinomial <- data.multinomial[index.multinomial, ]
-testset.multinomial <- data.multinomial[-index.multinomial, ]
-
+  # Part 3.4: Splitting dataset
+  options(scipen=999)  # prevents printing scientific notations.
+  set.seed(100)
+    # Part 3.4.1: Get only the chosen features
+    data.multinomial <- as.matrix(exprs(data.pp)[features, ])
+    # Part 3.4.2: Replace the features into their transcript ID
+    
+    # Part 3.4.3: Insert the diagnosis factor in the dataframe
+    data.multinomial <- as.data.frame(t(rbind(data.multinomial, diagnosis)))
+    data.multinomial$diagnosis <- factor(data.multinomial$diagnosis, ordered = FALSE)
+    
+    index.multinomial <- createDataPartition(data.multinomial$diagnosis, p = 0.75, list = F)
+    trainset.multinomial <- data.multinomial[index.multinomial, ]
+    testset.multinomial <- data.multinomial[-index.multinomial, ]
+  
+  remove(e, data)
