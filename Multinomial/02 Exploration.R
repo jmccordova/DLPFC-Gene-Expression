@@ -1,5 +1,4 @@
 # Part 2: Exploration
-
   # Part 2.1: Get information about the dataset
   slotNames(rawData)
   str(rawData)
