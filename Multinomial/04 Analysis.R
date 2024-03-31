@@ -25,6 +25,7 @@ model.knn <- train(x = trainset.multinomial[, colnames(trainset.multinomial) != 
 pred.model.knn <- predict(model.knn, newdata = testset.multinomial)
 confMatrix.model.knn <- confusionMatrix(pred.model.knn, testset.multinomial$diagnosis)
 var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+
 # Part 4.3: Decision Tree
 model.dt <- rpart(formula = diagnosis ~ .,
                   data = trainset.multinomial,

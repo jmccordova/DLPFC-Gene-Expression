@@ -145,13 +145,24 @@
     # Part 3.4.1: Get only the chosen features
     data.multinomial <- as.matrix(exprs(data.pp)[features, ])
     # Part 3.4.2: Replace the features into their transcript ID
-    
+      # Part 3.4.2.1: Remove the unnecessary transcripts to save memory
+      ids.ensembl <- ids.ensembl[is.element(ids.ensembl$id_internal_huex, features), ]
+      #ids.ensembl[is.element(ids.ensembl$id_internal_huex, features), c('id_internal_huex', 'gene_id', 'transcript_id', 'exon_id')]
+      # Part 3.4.2.2: Create a list of gene names that will be used as rowname
+      get_probe_info <- function(probeId) {
+        return(ids.ensembl[ids.ensembl$id_internal_huex == probeid, ])
+      }
     # Part 3.4.3: Insert the diagnosis factor in the dataframe
-    data.multinomial <- as.data.frame(t(rbind(data.multinomial, diagnosis)))
+    data.multinomial <- rbind(data.multinomial, diagnosis)
+    data.multinomial <- as.data.frame(t(data.multinomial))
     data.multinomial$diagnosis <- factor(data.multinomial$diagnosis, ordered = FALSE)
-    
+    # Part 3.4.4: Choose the index on which to choose as training
     index.multinomial <- createDataPartition(data.multinomial$diagnosis, p = 0.75, list = F)
+    # Part 3.4.5: To make the training better, perform upsampling
     trainset.multinomial <- data.multinomial[index.multinomial, ]
+    trainset.multinomial <- upSample(trainset.multinomial[, names(trainset.multinomial) %ni% c("diagnosis")], trainset.multinomial$diagnosis, yname = "diagnosis")
+    # Part 3.4.6: Correct the factors in testing
     testset.multinomial <- data.multinomial[-index.multinomial, ]
+    testset.multinomial$diagnosis <- factor(testset.multinomial$diagnosis, ordered = FALSE)
   
   remove(e, data)
