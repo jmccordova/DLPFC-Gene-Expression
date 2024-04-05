@@ -39,6 +39,13 @@
     features.gf.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.gf, ])))
     corrplot(features.gf.corr$r)
     
+    # Part 3.1.6: create Venn diagram and display all sets 
+    ggvenn(list('Coefficient of Variance' = features.gf.1, 
+                'T-Test' = features.gf.2, 
+                'ANOVA' = features.gf.3),
+           digits = 2
+    )
+    
   # Part 3.2: Principal Component Analysis
     # Step 3.2.1: Check for null values (If it returned more than 0, there is a null value)
     print(colSums(is.na(exprs(data.pp)))[colSums(is.na(exprs(data.pp))) != 0])
@@ -117,9 +124,9 @@
                    alpha.var="contrib",
                    col.var = "red3",
                    repel = TRUE,
-                   select.var = list(contrib = round(nrow(data.pp) * 0.01)),
+                   select.var = list(contrib = length(features.pca.1)),
                    ) + theme_minimal()
-      features.pca.2 <- as.character(features.pca.2$data[1:round(nrow(data.pp) * 0.01), 'name'])
+      features.pca.2 <- as.character(features.pca.2$data[, 'name'])
       # Step 3.2.9.3: Biplot of individuals and variables
       fviz_pca_biplot(model.pca.prcomp, repel = TRUE,
                       col.var = "#2E9FDF", # Variables color
@@ -134,7 +141,13 @@
       # Part 3.2.10.2: Create a correlation matrix across each features
       features.pca.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.pca, ])))
       corrplot(features.pca.corr$r)
-    
+      
+    # Step 3.2.11: create Venn diagram and display all sets 
+    ggvenn(list('PCATools' = features.pca.1, 
+                'Factoextra' = features.pca.2
+                ),
+           digits = 2
+    )
     
   # Step 3.3: Combine the features from Gene Filtering and PCA
     features <- unique(append(features.gf, features.pca))
@@ -164,5 +177,9 @@
     # Part 3.4.6: Correct the factors in testing
     testset.multinomial <- data.multinomial[-index.multinomial, ]
     testset.multinomial$diagnosis <- factor(testset.multinomial$diagnosis, ordered = FALSE)
-  
+    
+    # Step 3.4.7: Export
+    write.csv(data.multinomial, paste(datadir, "../Export/Chosen Dataset.csv", sep = ""), row.names = TRUE)
+    write.csv(ids.ensembl, paste(datadir, "../Export/Chosen Dataset Ensembl.csv", sep = ""), row.names = TRUE)
+    
   remove(e, data)

@@ -12,24 +12,24 @@
   
   BiocManager::install(
     c("tzdb", "vroom", "readr", "ggplot2", 
-      "backports", "ggcorrplot", "locfit", "oligo", 
+      "backports", "ggcorrplot", "locfit", "oligo", "ggpubr", 
       "pd.huex.1.0.st.v2", "BiocGenerics", 
       
       # Part 2: Explore
-      "ggpubr", "genefilter", "limma",
+      "genefilter", "limma", "ggvenn",
       "multtest", "annaffy",
       
       # Part 3: Dimension Reduction
       "withr", "corrr", "idm", "irlba", "PCAtools", 
       "RMTstat", "biomaRt", "pROC", "nFactors",
       "EFA.dimensions", 
-      "corrplot", "factoextra", "Hmisc", 
+      "corrplot", "factoextra", 
       
       # Part 4: Analysis
       "caret", "e1071", "lattice",  "naivebayes",
       "class", "gmodels", 
-      "rpart", "rpart.plot",
-      "nnet",
+      "rpart", "rpart.plot", "Hmisc", 
+      "nnet", "rminer",
       "randomForest"), 
     #force = TRUE, 
     dependencies = TRUE, 
@@ -38,12 +38,12 @@
   
   library(Biobase, lib.loc = package_loc); library(BiocSingular, lib.loc = package_loc); library(tzdb, lib.loc = package_loc); library(vroom, lib.loc = package_loc); library(readr, lib.loc = package_loc)
   library(S4Vectors, lib.loc = package_loc); library(IRanges, lib.loc = package_loc); library(XVector, lib.loc = package_loc); library(GenomeInfoDb, lib.loc = package_loc); library(Biostrings, lib.loc = package_loc)
-  library(backports, lib.loc = package_loc); library(ggcorrplot, lib.loc = package_loc)
+  library(backports, lib.loc = package_loc); library(ggcorrplot, lib.loc = package_loc); library(ggpubr, lib = package_loc); 
   library(BiocGenerics, lib.loc = package_loc); library(dplyr, lib.loc = package_loc); 
   library(oligoClasses, lib.loc = package_loc); library(memoise, lib.loc = package_loc); library(pd.huex.1.0.st.v2, lib.loc = package_loc); library(oligo, lib.loc = package_loc, attach.required = TRUE)
   
   # Part 2: Exploration
-  library(ggpubr, lib = package_loc); library(genefilter, lib = package_loc); library(limma, lib = package_loc)
+  library(genefilter, lib = package_loc); library(limma, lib = package_loc); library(ggvenn, lib = package_loc)
   library(multtest, lib = package_loc); library(annaffy, lib = package_loc)
   
   # Part 3: Dimension Reduction
@@ -55,13 +55,13 @@
   library(corrplot, lib.loc = package_loc); library(factoextra, lib.loc = package_loc)
   
   # Part 4: Analysis
-  library(caret, lib.loc = package_loc); library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
+  library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
   library(class, lib.loc = package_loc); library(gmodels, lib.loc = package_loc)
   library(parallel, lib.loc = package_loc); library(doParallel, lib.loc = package_loc)
   library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc)
-  library(nnet, lib.loc = package_loc)
+  library(nnet, lib.loc = package_loc); library(rminer, lib.loc = package_loc)
   library(randomForest, lib.loc = package_loc)
-  library(Hmisc, lib.loc = package_loc); 
+  library(Hmisc, lib.loc = package_loc); library(caret, lib.loc = package_loc); 
   
   # Part 1.3: Initialize cores for parallel processing
   cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS

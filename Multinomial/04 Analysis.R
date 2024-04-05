@@ -1,80 +1,149 @@
 # Part 4: Machine Learning
-alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
-
-# Part 4.1: Naive Bayes
-set.seed(100)
-model.nb <- train(x = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"], 
-                  y = trainset.multinomial$diagnosis, 
-                  method = "naive_bayes", 
-                  trControl = trainControl(method='cv', number=10)
-)
-pred.model.nb <- predict(model.nb, newdata = testset.multinomial[, colnames(trainset.multinomial) != "diagnosis"])
-confMatrix.model.nb <- confusionMatrix(pred.model.nb, testset.multinomial$diagnosis)
-var.model.nb <- varImp(model.nb, useModel = TRUE, nonpara = TRUE, scale = TRUE)
-
-# Part 4.2: K Nearest Neighbors
-set.seed(100)
-trControl.knn <- trainControl(method='repeatedcv', number = 3, allowParallel = TRUE)
-trainset.multinomial.preprocessed <- preProcess(trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"])
-model.knn <- train(x = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"], 
-                   y = trainset.multinomial$diagnosis, 
-                   method = "knn", 
-                   trControl = trControl.knn,
-                   tuneLength = 20
-)
-pred.model.knn <- predict(model.knn, newdata = testset.multinomial)
-confMatrix.model.knn <- confusionMatrix(pred.model.knn, testset.multinomial$diagnosis)
-var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
-
-# Part 4.3: Decision Tree
-model.dt <- rpart(formula = diagnosis ~ .,
-                  data = trainset.multinomial,
-                  method = "class", 
-                  control = rpart.control(minsplit=2, minbucket = 1, cp = 0.001)
-)
-pred.model.dt <- predict(model.dt, newdata = testset.multinomial)
-confMatrix.model.dt <- confusionMatrix(pred.model.dt, testset.multinomial$diagnosis)
-var.model.dt<- varImp(model.dt, useModel = TRUE, nonpara = TRUE, scale = TRUE)
-summary(model.dt)
-rpart.plot(model.dt)
-# Part 4.4: SVM
-# For SVM and random forest, cut the dataset to 10% of the dataset to make processing quicker
-#trainset.cut <- trainset[sample(x = 1:nrow(trainset), size = nrow(trainset) * .10, replace = TRUE), colnames(trainset)] 
-#trainset.cut <- upSample(x = trainset.cut[, colnames(trainset.cut) %ni% "ADDEPEV3"], yname = "ADDEPEV3", y = trainset.cut$ADDEPEV3)
-for (kernel in c("linear", "polynomial", "radial", "sigmoid")) {
-  for (cost in c(0.001, 0.01, 0.1, 1, 5, 10, 100)) {
-    print(paste(kernel," @ ", cost))
-    model.svm <- svm(x = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"], 
-                     y = trainset.multinomial$diagnosis, 
-                     kernel = kernel, 
-                     cost = cost,
-                     probability = TRUE,
-                     scale = TRUE
-    )
-    pred.model.svm <- predict(model.svm, newdata = testset.multinomial[, colnames(trainset.multinomial) != "diagnosis"])
-    confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset.multinomial$diagnosis)
-    print(confMatrix.modelsvm)
-    #err_metric(confMatrix.modelsvm$table[1,1], confMatrix.modelsvm$table[2,2], confMatrix.modelsvm$table[1,2], confMatrix.modelsvm$table[2,1])
-    # modelsvm <- cbind(modelsvm, c(modelsvm))    
+  # Part 4.1: Compute the alpha using Bonferroni
+  alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
+  # Part 4.2: Create a function for each ML
+  perform_learning <- function(method, trainset, testset, 
+                               svm.kernel = NULL, 
+                               svm.cost = NULL,
+                               rf.ntree = NULL,
+                               rf.mtry = NULL,
+                               export.filename = NULL,
+                               tune = FALSE) {
+    if (method == "NB") {
+      # Part 4.1: Naive Bayes
+      set.seed(100)
+      model.nb <- train(x = trainset[, colnames(trainset) != "diagnosis"], 
+                        y = trainset$diagnosis, 
+                        method = "naive_bayes", 
+                        trControl = trainControl(method='cv', number=10)
+      )
+      pred.model.nb <- predict(model.nb, newdata = testset[, colnames(trainset) != "diagnosis"])
+      confMatrix.model.nb <- confusionMatrix(pred.model.nb, testset$diagnosis)
+      var.model.nb <- varImp(model.nb, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+    } else if (method == "KNN") {
+      # Part 4.2: K Nearest Neighbors
+      set.seed(100)
+      trControl.knn <- trainControl(method='repeatedcv', number = 3, allowParallel = TRUE)
+      trainset.preprocessed <- preProcess(trainset[, colnames(trainset) != "diagnosis"])
+      model.knn <- train(x = trainset[, colnames(trainset) != "diagnosis"], 
+                         y = trainset$diagnosis, 
+                         method = "knn", 
+                         trControl = trControl.knn,
+                         tuneLength = 20
+      )
+      pred.model.knn <- predict(model.knn, newdata = testset)
+      confMatrix.model.knn <- confusionMatrix(pred.model.knn, testset$diagnosis)
+      var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+    } else if (method == "DT") {
+      # Part 4.3: Decision Tree
+        # Part 4.3.1: Using rpart
+        model.dt <- rpart(formula = diagnosis ~ .,
+                          data = trainset,
+                          method = "class", 
+                          control = rpart.control(minsplit=2, minbucket = 1, cp = 0.001)
+        )
+        var.model.dt<- varImp(model.dt, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+        rpart.plot(model.dt)
+        pdf(export.filename)
+        prp(model.dt, extra=104)
+        dev.off()
+      
+        # Part 4.3.2: Using train
+        ## 10-fold CV
+        ## repeated ten times
+        trControl.dt <- trainControl(
+          method = "repeatedcv",
+          number = 5,
+          repeats = 10)
+        model.dt <- train(x = trainset[, colnames(trainset) != "diagnosis"], 
+                          y = trainset$diagnosis, 
+                          method = "rpart2", 
+                          trControl = trControl.dt
+        )
+        pred.model.dt <- predict(model.dt, newdata = testset)
+        confMatrix.model.dt <- confusionMatrix(pred.model.dt, testset$diagnosis)
+    } else if (method == "SVM") {
+      # Part 4.4: SVM
+      # For SVM and random forest, cut the dataset to 10% of the dataset to make processing quicker
+      #trainset.cut <- trainset[sample(x = 1:nrow(trainset), size = nrow(trainset) * .10, replace = TRUE), colnames(trainset)] 
+      #trainset.cut <- upSample(x = trainset.cut[, colnames(trainset.cut) %ni% "ADDEPEV3"], yname = "ADDEPEV3", y = trainset.cut$ADDEPEV3)
+      if (tune) {
+        kernels <- c("rbfdot", "polydot", "tanhdot", "vanilladot", "laplacedot", "besseldot", "anovadot", "splinedot")
+        costs <- c(0.001, 0.01, 0.1, 1, 5, 10, 100)
+      } else {
+        kernels <- c(svm.kernel)
+        costs <- c(svm.cost)
+      }
+      
+      for (kernel in kernels) {
+        for (cost in costs) {
+          print(paste(kernel," @ ", cost))
+          model.svm <- rminer::fit(diagnosis ~ ., 
+                         data = trainset, 
+                         model = "svm",
+                         kernel = kernel,
+                         kpar = "automatic", 
+                         C = cost,
+                         task = "class"
+                       )
+          pred.model.svm <- predict(model.svm, newdata = testset)
+          confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset$diagnosis)
+          print(confMatrix.model.svm)
+          var.model.svm <- Importance(model.svm, data = trainset)
+        }
+      }
+    } else if (method == "LOG") {
+      model.logit <- multinom(diagnosis ~ .,
+                              data = trainset)
+      pred.model.logit <- predict(model.logit, newdata = testset[, colnames(testset) != "diagnosis"], type = "class")
+      confMatrix.model.logit <- confusionMatrix(pred.model.logit, testset$diagnosis)
+      var.model.logit <- varImp(model.logit, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      
+      summary(model.logit)
+      View(cbind("coeff" = coef(model.logit), "odds ratio" = (exp(coef(model.logit)) - 1) * 100)) # Odds ratio
+    } else if (method == "DA") {
+      # Part 4.6: Discriminant Analysis
+    } else if (method == "RF") {
+      # Part 4.7: Random Forest
+      set.seed(100)
+      if (tune) {
+        mtries <- sort.int(sample(ncol(trainset)-1, 5))
+        ntrees <- c(201, 501, 1501, 2501, 3501)
+      } else {
+        mtries <- c(rf.mtry)
+        ntrees <- c(rf.ntree)
+      }
+      
+      for(ntree in ntrees) {
+        for(mtry in mtries) {
+          model.rf <- randomForest(diagnosis ~ ., 
+                                   data = trainset, 
+                                   ntree = ntree, 
+                                   mtry = mtry
+          )
+          pred.model.rf <- predict(model.rf, newdata = testset)
+          confMatrix.model.rf <- confusionMatrix(pred.model.rf, testset$diagnosis)
+        }
+      }
+    } else {
+      print('No such methodology')
+    }
   }
-}
-# Part 4.5: Logistic Regression
-#model.logit <- glm(x = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"], 
-#                   y = trainset.multinomial$diagnosis,
-#                   family = binomial(link = "logit"), 
-#               )
-model.logit <- multinom(diagnosis ~ .,
-                        data = trainset.multinomial)
-pred.model.logit <- predict(model.logit, newdata = testset.multinomial[, colnames(trainset.multinomial) != "diagnosis"], type = "response") > 0.5
-confMatrix.model.logit <- confusionMatrix(pred.model.logit, testset.multinomial$diagnosis)
-summary(model.logit)
-print(cbind("coeff" = model.logit$coefficients, "odds ratio" = (exp(model.logit$coefficients) - 1) * 100)) # Odds ratio
-# Part 4.6: Discriminant Analysis
-# Part 4.7: Random Forest
-model.rf <- randomForest(diagnosis ~ ., 
-                         data = trainset.multinomial, 
-                         ntree = 300, 
-                         mtry = 21591
-)
-pred.model.rf <- predict(model.rf, newdata = testset.multinomial)
-confMatrix.model.rf <- confusionMatrix(pred.model.rf, testset.multinomial$diagnosis)
+  
+  # Part 4.3: Perform ML
+    # Part 4.3.1: Gene Filtering Dataset
+      features.selected <- c(features.gf, "diagnosis")
+      # Part 4.3.1.1: Naive Bayes
+      perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+      perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+      perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+      perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+      perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+      perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+    # Part 4.3.2: PCA Dataset
+      features.selected <- c(features.pca, "diagnosis")
+    # Part 4.3.1: Combined Dataset
+      perform_learning("SVM", trainset.multinomial, testset.multinomial)
+      
+    
