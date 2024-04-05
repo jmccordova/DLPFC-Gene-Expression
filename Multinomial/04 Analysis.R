@@ -116,13 +116,16 @@
       
       for(ntree in ntrees) {
         for(mtry in mtries) {
-          model.rf <- randomForest(diagnosis ~ ., 
-                                   data = trainset, 
+          print(paste(ntree," and ", mtry))
+          model.rf <- randomForest(x = trainset[, colnames(trainset) != "diagnosis"],
+                                   y = trainset$diagnosis, 
                                    ntree = ntree, 
                                    mtry = mtry
           )
           pred.model.rf <- predict(model.rf, newdata = testset)
           confMatrix.model.rf <- confusionMatrix(pred.model.rf, testset$diagnosis)
+          print(confMatrix.model.rf)
+          var.model.rf <- varImp(model.rf, useModel = TRUE, nonpara = TRUE, scale = TRUE)
         }
       }
     } else {
@@ -133,17 +136,28 @@
   # Part 4.3: Perform ML
     # Part 4.3.1: Gene Filtering Dataset
       features.selected <- c(features.gf, "diagnosis")
-      # Part 4.3.1.1: Naive Bayes
+    # Part 4.3.2: Perform tuning for SVM and Random Forest
+      perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+    # Perform 4.3.3: Do analysis
+      # Part 4.3.3.1: Naive Bayes
       perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
       perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
-      perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      #perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = , svm.cost = )
       perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
       perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
       perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
-      perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      #perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], ntree = , mtry = )
     # Part 4.3.2: PCA Dataset
       features.selected <- c(features.pca, "diagnosis")
     # Part 4.3.1: Combined Dataset
       perform_learning("SVM", trainset.multinomial, testset.multinomial)
       
-    
+      model.rf <- randomForest(x = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"],
+                               y = trainset.multinomial$diagnosis, 
+                               ntree = 501, 
+                               mtry = 100
+      )
+      pred.model.rf <- predict(model.rf, newdata = testset.multinomial)
+      confMatrix.model.rf <- confusionMatrix(pred.model.rf, testset.multinomial$diagnosis)
+      
