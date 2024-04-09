@@ -88,7 +88,9 @@
                        )
           pred.model.svm <- predict(model.svm, newdata = testset)
           confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset$diagnosis)
-          print(confMatrix.model.svm)
+          if (tune) {
+            print(confMatrix.model.svm)
+          }
           var.model.svm <- Importance(model.svm, data = trainset)
         }
       }
@@ -103,6 +105,11 @@
       View(cbind("coeff" = coef(model.logit), "odds ratio" = (exp(coef(model.logit)) - 1) * 100)) # Odds ratio
     } else if (method == "DA") {
       # Part 4.6: Discriminant Analysis
+      model.lda <- lda(diagnosis ~ ., 
+                       data = trainset,
+      )
+      pred.model.lda <- predict(model.lda, newdata = testset)
+      confMatrix.model.lda <- confusionMatrix(pred.model.lda$class, testset$diagnosis)
     } else if (method == "RF") {
       # Part 4.7: Random Forest
       set.seed(100)
@@ -129,35 +136,50 @@
         }
       }
     } else {
-      print('No such methodology')
+      model.auto <- rminer::fit(diagnosis ~ ., 
+                                data = trainset, 
+                                model = "auto",
+                                fdebug = TRUE,
+                                search = list(
+                                  search = mparheuristic( 
+                                    model = c("naive","ctree","cv.glmnet","rpart","kknn","ksvm","lssvm","mlp","mlpe", "randomForest","lda","multinom", "naiveBayes","xgboost"),
+                                    task = "class", 
+                                    inputs = ncol(trainset)-1
+                                  ),
+                                  smethod = "auto",
+                                  metric = "AUC",
+                                  convex = 0
+                                )
+      )
+      pred.model.auto <- predict(model.auto, testset)
+      var.model.auto <- Importance(model.auto, data = trainset, method = "DSA")
+      # show leaderboard:
+      cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
+      cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
+      cat("Best model:", model.auto@model, "\n")
+      cat("AUC", "=", round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"),2), "\n")
     }
   }
   
   # Part 4.3: Perform ML
     # Part 4.3.1: Gene Filtering Dataset
-      features.selected <- c(features.gf, "diagnosis")
-    # Part 4.3.2: Perform tuning for SVM and Random Forest
+    features.selected <- c(features.gf, "diagnosis")
+      # Part 4.3.1.1: Perform tuning for SVM and Random Forest
       perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
       perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
-    # Perform 4.3.3: Do analysis
-      # Part 4.3.3.1: Naive Bayes
-      perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
-      perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
-      #perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = , svm.cost = )
-      perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
-      perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
-      perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
-      #perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], ntree = , mtry = )
+      # Part 4.3.1.2: Perform analysis
+        # Part 4.3.1.2.1: Do ensemble of all learning methods
+        perform_learning("auto", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        # Part 4.3.1.2.2: Naive Bayes
+        perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        #perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = , svm.cost = )
+        perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        #perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], ntree = , mtry = )
     # Part 4.3.2: PCA Dataset
       features.selected <- c(features.pca, "diagnosis")
     # Part 4.3.1: Combined Dataset
       perform_learning("SVM", trainset.multinomial, testset.multinomial)
-      
-      model.rf <- randomForest(x = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"],
-                               y = trainset.multinomial$diagnosis, 
-                               ntree = 501, 
-                               mtry = 100
-      )
-      pred.model.rf <- predict(model.rf, newdata = testset.multinomial)
-      confMatrix.model.rf <- confusionMatrix(pred.model.rf, testset.multinomial$diagnosis)
       

@@ -23,14 +23,15 @@
       "withr", "corrr", "idm", "irlba", "PCAtools", 
       "RMTstat", "biomaRt", "pROC", "nFactors",
       "EFA.dimensions", 
-      "corrplot", "factoextra", 
+      "corrplot", "factoextra", "car", 
       
       # Part 4: Analysis
       "caret", "e1071", "lattice",  "naivebayes",
       "class", "gmodels", 
       "rpart", "rpart.plot", "Hmisc", 
       "nnet", "rminer",
-      "randomForest"), 
+      "randomForest",
+      "MASS"), 
     #force = TRUE, 
     dependencies = TRUE, 
     lib = package_loc
@@ -52,7 +53,7 @@
   library(PCAtools, lib.loc = package_loc); library(RMTstat, lib.loc = package_loc); library(biomaRt, lib.loc = package_loc); library(cowplot, lib.loc = package_loc); library(ggplotify, lib.loc = package_loc)
   library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); 
   library(EFA.dimensions, lib.loc = package_loc)
-  library(corrplot, lib.loc = package_loc); library(factoextra, lib.loc = package_loc)
+  library(corrplot, lib.loc = package_loc); library(factoextra, lib.loc = package_loc); library(car, lib.loc = package_loc)
   
   # Part 4: Analysis
   library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
@@ -61,6 +62,7 @@
   library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc)
   library(nnet, lib.loc = package_loc); library(rminer, lib.loc = package_loc)
   library(randomForest, lib.loc = package_loc)
+  library(MASS, lib.loc = package_loc)
   library(Hmisc, lib.loc = package_loc); library(caret, lib.loc = package_loc); 
   
   # Part 1.3: Initialize cores for parallel processing
@@ -96,3 +98,31 @@
     # Part 1.5.4: Extracting probeset information
     ids.ensembl <- read_tsv(paste(probedir, 'Affymetrix_HuEx_microarray_probeset_IDs_to_Ensemble_IDs.tsv', sep = ''))
     ids.ensembl <- as.data.frame(ids.ensembl)
+    
+    # A which for multidimensional arrays.
+    # Mark van der Loo 16.09.2011
+    #
+    # A Array of booleans
+    # returns a sum(A) x length(dim(A)) array of multi-indices where A == TRUE
+    #
+    multi.which <- function(A){
+      if ( is.vector(A) ) return(which(A))
+      d <- dim(A)
+      T <- which(A) - 1
+      nd <- length(d)
+      t( sapply(T, function(t){
+        I <- integer(nd)
+        I[1] <- t %% d[1]
+        sapply(2:nd, function(j){
+          I[j] <<- (t %/% prod(d[1:(j-1)])) %% d[j]
+        })
+        I
+      }) + 1 )
+    }
+
+    show_perfect_collinearity <- function(df) {
+      df <- cor(t(df))
+      print(multi.which(df == 1))
+      remove(df)
+    }
+    

@@ -32,10 +32,23 @@
   
     # Part 3.1.4: Combine similar features
     features.gf <- Reduce(intersect, List(features.gf.1, features.gf.2, features.gf.3))
-      # Part 3.1.4.1: Put to HTML the names of the features
-      atab <- aafTableAnn(features.gf, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
-      saveHTML(atab, file=paste(datadir, "Export/Gene Filtering Probe Names.html", sep = ""))
-    # Part 3.1.5: Create a correlation matrix across each features
+    # Part 3.1.5: Check the collinearity of each predictor
+      # Part 3.1.5.1: Look for perfect collinearity
+      data.gf <- as.matrix(exprs(data.pp)[features.gf, ])
+      show_perfect_collinearity(data.gf)
+    # Part 3.1.6: Since there's no perfect collinearity, proceed
+    data.gf <- as.matrix(exprs(data.pp)[features.gf, ])
+    data.gf <- rbind(data.gf, diagnosis.binom)
+    data.gf <- as.data.frame(t(data.gf))
+    model.gf <- lm(diagnosis.binom ~ ., data = data.gf)
+      # Part 3.1.5.1: Get only the factors with no to moderate collinearity (VIF <= 5)
+      features.gf <- names(vif(model.gf)[vif(model.gf) <= 5])
+      features.gf <- gsub("`", "", features.gf, fixed = T)
+      remove(data.gf, model.gf)
+    # Part 3.1.6: Put to HTML the names of the features
+    atab <- aafTableAnn(features.gf, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
+    saveHTML(atab, file=paste(datadir, "../Export/Gene Filtering Probe Names.html", sep = ""))
+    # Part 3.1.7: Create a correlation matrix across each features
     features.gf.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.gf, ])))
     corrplot(features.gf.corr$r)
     
@@ -135,14 +148,28 @@
       )
     # Step 3.2.10: For each of the principal component, get the variable with highest magnitude of eigenvalues
     features.pca <- Reduce(intersect, List(features.pca.1, features.pca.2))
-      # Part 3.2.10.1: Put to HTML the names of the features
-      atab <- aafTableAnn(features.pca, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
-      saveHTML(atab, file=paste(datadir, "Export/PCA Probe Names.html", sep = ""))
-      # Part 3.2.10.2: Create a correlation matrix across each features
-      features.pca.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.pca, ])))
-      corrplot(features.pca.corr$r)
+    # Step 3.2.11: Check for multicollinearity
+      data.pca <- as.matrix(exprs(data.pp)[features.pca, ])
+      show_perfect_collinearity(data.pca)
+      # Step 3.2.11.1: From a correlation testing, features "2908474" "2908505" have perfect collinearity; remove them
+      features.pca <- features.pca[features.pca != c("2908474", "2908505")]
+      # Step 3.2.11.2: Proceed with getting VIF
+      data.pca <- as.matrix(exprs(data.pp)[features.pca, ])
+      data.pca <- rbind(data.pca, diagnosis.binom)
+      data.pca <- as.data.frame(t(data.pca))
+      model.pca <- lm(diagnosis.binom ~ ., data = data.pca)
+      # Part 3.2.11.3: Get only the factors with no to moderate collinearity (VIF <= 5)
+      features.pca <- names(vif(model.pca)[vif(model.pca) <= 5])
+      features.pca <- gsub("`", "", features.pca, fixed = T)
+      remove(data.pca, model.pca)
+    # Part 3.2.13: Put to HTML the names of the features
+    atab <- aafTableAnn(features.pca, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
+    saveHTML(atab, file=paste(datadir, "../Export/PCA Probe Names.html", sep = ""))
+    # Part 3.2.14: Create a correlation matrix across each features
+    features.pca.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.pca, ])))
+    corrplot(features.pca.corr$r)
       
-    # Step 3.2.11: create Venn diagram and display all sets 
+    # Step 3.2.15: create Venn diagram and display all sets 
     ggvenn(list('PCATools' = features.pca.1, 
                 'Factoextra' = features.pca.2
                 ),
@@ -150,7 +177,32 @@
     )
     
   # Step 3.3: Combine the features from Gene Filtering and PCA
-    features <- unique(append(features.gf, features.pca))
+  features <- unique(append(features.gf, features.pca))
+    # Step 3.3.1: Look for perfect collinearity
+    data.features <- as.matrix(exprs(data.pp)[features, ])
+    show_perfect_collinearity(data.features)
+    # Step 3.3.2: Since there is no perfect collinearity, proceed
+    data.features <- as.matrix(exprs(data.pp)[features, ])
+    data.features <- rbind(data.features, diagnosis.binom)
+    data.features <- as.data.frame(t(data.features))
+    model.features <- lm(diagnosis.binom ~ ., data = data.features)
+    # Part 3.3.3: Get only the factors with no to moderate collinearity (VIF <= 5)
+    features <- names(vif(model.features)[vif(model.features) <= 5])
+    features <- gsub("`", "", features, fixed = T)
+    remove(data.features, model.features)
+    # Part 3.3.4: Put to HTML the names of the features
+    atab <- aafTableAnn(features.pca, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
+    saveHTML(atab, file=paste(datadir, "../Export/GF + PCA Probe Names.html", sep = ""))
+    # Part 3.2.14: Create a correlation matrix across each features
+    features.corr <- rcorr(as.matrix(t(exprs(data.pp)[features, ])))
+    corrplot(features.corr$r)
+    
+    # Step 3.2.15: create Venn diagram and display all sets 
+    ggvenn(list('Gene Filter' = features.gf, 
+                'PCA' = features.pca
+    ),
+    digits = 2
+    )
 
   # Part 3.4: Splitting dataset
   options(scipen=999)  # prevents printing scientific notations.
