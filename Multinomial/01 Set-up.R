@@ -31,7 +31,7 @@
       "rpart", "rpart.plot", "Hmisc", 
       "nnet", "rminer",
       "randomForest",
-      "MASS"), 
+      "MASS", "Metrics"), 
     #force = TRUE, 
     dependencies = TRUE, 
     lib = package_loc
@@ -62,7 +62,7 @@
   library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc)
   library(nnet, lib.loc = package_loc); library(rminer, lib.loc = package_loc)
   library(randomForest, lib.loc = package_loc)
-  library(MASS, lib.loc = package_loc)
+  library(MASS, lib.loc = package_loc); library(Metrics, lib.loc = package_loc); 
   library(Hmisc, lib.loc = package_loc); library(caret, lib.loc = package_loc); 
   
   # Part 1.3: Initialize cores for parallel processing
