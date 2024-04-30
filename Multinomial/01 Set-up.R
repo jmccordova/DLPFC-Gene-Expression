@@ -1,7 +1,8 @@
 # Part 1: Setting up
   # Part 1.1: Sets the location of the data to be used and where the packages should be put
   datadir <- "E:/jmcco/Downloads/BNF 300.2 Data/GSE208338_RAW/"
-  probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/Affymetrix_HuEx/"
+  #probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/Affymetrix_HuEx/"
+  probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/HuEx-1_0-st-v2-na36-hg19 Probeset/"
   setwd(datadir)
   package_loc <- paste(datadir, "lib", sep = "")
   
@@ -24,6 +25,7 @@
       "RMTstat", "biomaRt", "pROC", "nFactors",
       "EFA.dimensions", 
       "corrplot", "factoextra", "car", 
+      "jsonlite",
       
       # Part 4: Analysis
       "caret", "e1071", "lattice",  "naivebayes",
@@ -54,6 +56,7 @@
   library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); 
   library(EFA.dimensions, lib.loc = package_loc)
   library(corrplot, lib.loc = package_loc); library(factoextra, lib.loc = package_loc); library(car, lib.loc = package_loc)
+  library(jsonlite, lib.loc = package_loc)
   
   # Part 4: Analysis
   library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
@@ -96,8 +99,7 @@
     }
     
     # Part 1.5.4: Extracting probeset information
-    ids.ensembl <- read_tsv(paste(probedir, 'Affymetrix_HuEx_microarray_probeset_IDs_to_Ensemble_IDs.tsv', sep = ''))
-    ids.ensembl <- as.data.frame(ids.ensembl)
+    huex.probes <- read.csv(paste(probedir, 'HuEx-1_0-st-v2.na36.hg19.probeset.csv', sep = ''), comment.char = "#", header = TRUE)
     
     # A which for multidimensional arrays.
     # Mark van der Loo 16.09.2011
@@ -125,4 +127,3 @@
       print(multi.which(df == 1))
       remove(df)
     }
-    

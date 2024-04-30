@@ -203,20 +203,32 @@
     ),
     digits = 2
     )
+    
+  # Part 3.4: Get probe profiles and annotations
+    # This part was done using Ensemble Biomart with following specifications:
+    # Dataset
+    #   Human genes (GRCh38.p14)
+    # Filters
+    #   AFFY HuEx 1 0 st v2 probe ID(s) [e.g. 4037576]: [ID-list specified]
+    #Attributes
+    #   Gene stable ID
+    #   Gene stable ID version
+    #   Transcript stable ID
+    #   Transcript stable ID version
+    #   Exon stable ID
+    #   Gene description
+    #   GO term accession
 
   # Part 3.4: Splitting dataset
   options(scipen=999)  # prevents printing scientific notations.
   set.seed(100)
     # Part 3.4.1: Get only the chosen features
     data.multinomial <- as.matrix(exprs(data.pp)[features, ])
-    # Part 3.4.2: Replace the features into their transcript ID
-      # Part 3.4.2.1: Remove the unnecessary transcripts to save memory
-      ids.ensembl <- ids.ensembl[is.element(ids.ensembl$id_internal_huex, features), ]
-      #ids.ensembl[is.element(ids.ensembl$id_internal_huex, features), c('id_internal_huex', 'gene_id', 'transcript_id', 'exon_id')]
-      # Part 3.4.2.2: Create a list of gene names that will be used as rowname
-      get_probe_info <- function(probeId) {
-        return(ids.ensembl[ids.ensembl$id_internal_huex == probeid, ])
-      }
+    # Part 3.4.2: Keep only selected probes
+    huex.probes <- huex.probes[which(huex.probes$probeset_id %in% features), ]
+      # Part 3.4.2.1: Show probes not in the probeset annotation
+      features.missed <- features[which(features %ni% huex.probes$probeset_id)]
+      print(features.missed)
     # Part 3.4.3: Insert the diagnosis factor in the dataframe
     data.multinomial <- rbind(data.multinomial, diagnosis)
     data.multinomial <- as.data.frame(t(data.multinomial))
@@ -232,6 +244,13 @@
     
     # Step 3.4.7: Export
     write.csv(data.multinomial, paste(datadir, "../Export/Chosen Dataset.csv", sep = ""), row.names = TRUE)
-    write.csv(ids.ensembl, paste(datadir, "../Export/Chosen Dataset Ensembl.csv", sep = ""), row.names = TRUE)
+    write.csv(huex.probes, paste(datadir, "../Export/Chosen Probes.csv", sep = ""), row.names = TRUE)
     
   remove(e, data)
+
+  results <- c()
+  for ( probe in features.missed ){
+    q <- paste(sep="","https://biodbnet-abcc.ncifcrf.gov/webServices/rest.php/biodbnetRestApi.json?method=db2db&input=affyid&inputValues=",probe,"&outputs=genesymbol&taxonId=9606&format=row")
+    results <- rbind(results,fromJSON(txt=q))
+  }
+  

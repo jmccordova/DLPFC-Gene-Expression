@@ -55,6 +55,7 @@
                           control = rpart.control(minsplit=2, minbucket = 1, cp = 0.001)
         )
         var.model.dt<- varImp(model.dt, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+        arrange(var.model.dt, desc(Overall))
         rpart.plot(model.dt)
         pdf(export.filename)
         prp(model.dt, extra=104)
@@ -141,12 +142,27 @@
       confMatrix.model.logit <- confusionMatrix(pred.model.logit, testset$diagnosis)
       var.model.logit <- varImp(model.logit, useModel = TRUE, nonpara = TRUE, scale = TRUE)
       
-      summary(model.logit)
-      View(cbind("coeff" = coef(model.logit), "odds ratio" = (exp(coef(model.logit)) - 1) * 100)) # Odds ratio
+      #summary(model.logit)
+      #View(cbind("coeff" = coef(model.logit), "odds ratio" = (exp(coef(model.logit)) - 1) * 100)) # Odds ratio
       
       return(list(model = model.logit, pred = pred.model.logit, confMatrix = confMatrix.model.logit, var = var.model.logit, roc = roc.model.logit))
     } else if (method == "DA") {
       # Part 4.6: Discriminant Analysis
+      trControl.lda <- trainControl(classProbs = TRUE)
+      levels(trainset$diagnosis)[match("1",levels(trainset$diagnosis))] <- "BPD"
+      levels(trainset$diagnosis)[match("2",levels(trainset$diagnosis))] <- "MDD"
+      levels(trainset$diagnosis)[match("3",levels(trainset$diagnosis))] <- "SCZ"
+      levels(trainset$diagnosis)[match("9",levels(trainset$diagnosis))] <- "CTL"
+      model.lda <- train(diagnosis ~ ., 
+                         data = trainset, 
+                         method = "lda",
+                         trControl = trControl.lda)
+      levels(testset$diagnosis)[match("1",levels(testset$diagnosis))] <- "BPD"
+      levels(testset$diagnosis)[match("2",levels(testset$diagnosis))] <- "MDD"
+      levels(testset$diagnosis)[match("3",levels(testset$diagnosis))] <- "SCZ"
+      levels(testset$diagnosis)[match("9",levels(testset$diagnosis))] <- "CTL"
+      var.model.lda <- varImp(model.lda, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      
       model.lda <- lda(diagnosis ~ ., 
                        data = trainset,
       )
@@ -157,9 +173,8 @@
                                                           type = "prob")$posterior,
                                       percent = TRUE)
       confMatrix.model.lda <- confusionMatrix(pred.model.lda$class, testset$diagnosis)
-      #var.model.lda <- varImp(model.lda, useModel = TRUE, nonpara = TRUE, scale = TRUE)
       #return(list(model = model.lda, pred = pred.model.lda, confMatrix = confMatrix.model.lda, var = var.model.lda))
-      return(list(model = model.lda, pred = pred.model.lda, confMatrix = confMatrix.model.lda, roc = roc.model.lda))
+      return(list(model = model.lda, pred = pred.model.lda, confMatrix = confMatrix.model.lda, var = var.model.lda, roc = roc.model.lda))
     } else if (method == "RF") {
       # Part 4.7: Random Forest
       set.seed(100)
@@ -192,6 +207,7 @@
             print(confMatrix.model.rf)
           }
           var.model.rf <- varImp(model.rf, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+          var.model.rf <- arrange(var.model.rf, desc(Overall))
         }
       }
       
@@ -265,26 +281,35 @@
         learn.pca.nb <- perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
         # Part 4.3.2.2.3: KNN
         learn.pca.knn <- perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
-        # Part 4.3.2.2.4: SVM
-        learn.pca.svm <- perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = 'laplacedot', svm.cost = 10)
+        # Part 4.3.2.2.4: SVM (For PCA, SVM tuning had no significant features)
+        #learn.pca.svm <- perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = 'laplacedot', svm.cost = 10)
         # Part 4.3.2.2.5: Logistic Regression
         learn.pca.log <- perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
         # Part 4.3.2.2.6: Discriminant Analysis
         learn.pca.da <- perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
         # Part 4.3.2.2.7: Decision Tree
         learn.pca.dt <- perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
-        # Part 4.3.2.2.8: Random Forest
-        learn.pca.rf <- perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], rf.ntree = 201, rf.mtry = 10)
-    # Part 4.3.1: Combined Dataset
+        # Part 4.3.2.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
+        #learn.pca.rf <- perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], rf.ntree = 201, rf.mtry = 10)
+    # Part 4.3.3: Combined Dataset
       features.selected <- c(features, "diagnosis")
-      
-      model.lda <- lda(diagnosis ~ ., 
-                       data = trainset.multinomial,
-      )
-      pred.model.lda <- predict(model.lda, newdata = testset.multinomial)
-      roc.model.lda <- multiclass.roc(response = testset.multinomial$diagnosis, 
-                                      predictor = predict(model.lda, 
-                                                          newdata = testset.multinomial[, colnames(testset.multinomial) != "diagnosis"], 
-                                                          type = "prob")$posterior,
-                                      percent = TRUE)
-      
+      # Part 4.3.3.1: Perform tuning for SVM and Random Forest
+      perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      # Part 4.3.3.2: Perform analysis
+        # Part 4.3.3.2.1: Do ensemble of all learning methods
+        learn.features.auto <- perform_learning("auto", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        # Part 4.3.3.2.2: Naive Bayes
+        learn.features.nb <- perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        # Part 4.3.3.2.3: KNN
+        learn.features.knn <- perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        # Part 4.3.3.2.4: SVM
+        learn.features.svm <- perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = 'laplacedot', svm.cost = 100)
+        # Part 4.3.3.2.5: Logistic Regression
+        learn.features.log <- perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        # Part 4.3.3.2.6: Discriminant Analysis
+        learn.features.da <- perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        # Part 4.3.3.2.7: Decision Tree
+        learn.features.dt <- perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        # Part 4.3.3.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
+        #learn.features.rf <- perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], rf.ntree = 201, rf.mtry = 10)
