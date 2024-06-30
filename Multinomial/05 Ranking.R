@@ -61,3 +61,6 @@ ranking <- list(
 )
 
 write.csv(ranking, paste(datadir, "../Export/Ranking.csv", sep = ""), row.names = TRUE)
+
+# Get data from annotation
+huex.probes[, which(huex.probes$probeset_id %in% features)]
