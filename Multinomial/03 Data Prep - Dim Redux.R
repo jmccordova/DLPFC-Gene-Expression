@@ -177,7 +177,7 @@
     )
     
   # Step 3.3: Combine the features from Gene Filtering and PCA
-  features <- unique(append(features.gf, features.pca))
+  features <- unique(c(features.gf, features.pca))
     # Step 3.3.1: Look for perfect collinearity
     data.features <- as.matrix(exprs(data.pp)[features, ])
     show_perfect_collinearity(data.features)
@@ -219,38 +219,50 @@
     #   Gene description
     #   GO term accession
 
-  # Part 3.4: Splitting dataset
-  options(scipen=999)  # prevents printing scientific notations.
-  set.seed(100)
-    # Part 3.4.1: Get only the chosen features
-    data.multinomial <- as.matrix(exprs(data.pp)[features, ])
-    # Part 3.4.2: Keep only selected probes
-    huex.probes <- huex.probes[which(huex.probes$probeset_id %in% features), ]
+    # Part 3.4: Splitting dataset
+    createDataset <- function(dataSource, features, probeset, filename) {
+      # Part 3.4.1: Get only the chosen features
+      data <- as.matrix(exprs(dataSource)[features, ])
+      # Part 3.4.2: Keep only selected probes
+      huex.probes <- huex.probes[which(probeset$probeset_id %in% features), ]
       # Part 3.4.2.1: Show probes not in the probeset annotation
-      features.missed <- features[which(features %ni% huex.probes$probeset_id)]
+      features.missed <- features[which(features %ni% probeset$probeset_id)]
+      print("Unannotated Features")
       print(features.missed)
-    # Part 3.4.3: Insert the diagnosis factor in the dataframe
-    data.multinomial <- rbind(data.multinomial, diagnosis)
-    data.multinomial <- as.data.frame(t(data.multinomial))
-    data.multinomial$diagnosis <- factor(data.multinomial$diagnosis, ordered = FALSE)
-    # Part 3.4.4: Choose the index on which to choose as training
-    index.multinomial <- createDataPartition(data.multinomial$diagnosis, p = 0.75, list = F)
-    # Part 3.4.5: To make the training better, perform upsampling
-    trainset.multinomial <- data.multinomial[index.multinomial, ]
-    trainset.multinomial <- upSample(trainset.multinomial[, names(trainset.multinomial) %ni% c("diagnosis")], trainset.multinomial$diagnosis, yname = "diagnosis")
-    # Part 3.4.6: Correct the factors in testing
-    testset.multinomial <- data.multinomial[-index.multinomial, ]
-    testset.multinomial$diagnosis <- factor(testset.multinomial$diagnosis, ordered = FALSE)
+      # Part 3.4.3: Insert the diagnosis factor in the dataframe
+      data <- rbind(data, diagnosis)
+      data <- as.data.frame(t(data))
+      data$diagnosis <- factor(data$diagnosis, ordered = FALSE)
+      
+      # Step 3.4.4: Export
+      write.csv(data, paste(datadir, "../Export/" , filename , " Chosen Dataset.csv", sep = ""), row.names = TRUE)
+      write.csv(huex.probes, paste(datadir, "../Export/" , filename , " Chosen Probes.csv", sep = ""), row.names = TRUE)
+      
+      return(data)
+    }
     
-    # Step 3.4.7: Export
-    write.csv(data.multinomial, paste(datadir, "../Export/Chosen Dataset.csv", sep = ""), row.names = TRUE)
-    write.csv(huex.probes, paste(datadir, "../Export/Chosen Probes.csv", sep = ""), row.names = TRUE)
+    # Part 3.5: Building dataset for training and testing
+    buildTrainTest <- function(dataSource) {
+      options(scipen=999)  # prevents printing scientific notations.
+      set.seed(100)
+      # Part 3.5.1: Choose the index on which to choose as training
+      index <- createDataPartition(dataSource$diagnosis, p = 0.75, list = F)
+      # Part 3.5.2: To make the training better, perform upsampling
+      trainset <- dataSource[index, ]
+      trainset <- upSample(trainset[, names(trainset) != "diagnosis"], trainset$diagnosis, yname = "diagnosis")
+      # Part 3.5.3: Correct the factors in testing
+      testset <- dataSource[-index, ]
+      testset$diagnosis <- factor(testset$diagnosis, ordered = FALSE)
+      
+      return(list(trainset = trainset,
+                  testset = testset))
+    }
     
-  remove(e, data)
-
-  results <- c()
-  for ( probe in features.missed ){
-    q <- paste(sep="","https://biodbnet-abcc.ncifcrf.gov/webServices/rest.php/biodbnetRestApi.json?method=db2db&input=affyid&inputValues=",probe,"&outputs=genesymbol&taxonId=9606&format=row")
-    results <- rbind(results,fromJSON(txt=q))
-  }
-  
+    remove(e, data)
+    
+    # Step 3.5: Get the gene data on the unannotated features
+    results <- c()
+    for ( probe in features.missed ){
+      q <- paste(sep="","https://biodbnet-abcc.ncifcrf.gov/webServices/rest.php/biodbnetRestApi.json?method=db2db&input=affyid&inputValues=",probe,"&outputs=genesymbol&taxonId=9606&format=row")
+      results <- rbind(results,fromJSON(txt=q))
+    }

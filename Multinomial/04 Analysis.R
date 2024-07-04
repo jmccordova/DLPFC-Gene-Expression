@@ -248,68 +248,80 @@
   
   # Part 4.3: Perform ML
     # Part 4.3.1: Gene Filtering Dataset
-    features.selected <- c(features.gf, "diagnosis")
+    data.binomial <- createDataset(data.pp, features.gf, huex.probes, "Gene Filtering")
+    sets <- buildTrainTest(data.binomial)
+    trainset.binomial <- sets$trainset
+    testset.binomial <- sets$testset
+    remove(sets)
       # Part 4.3.1.1: Perform tuning for SVM and Random Forest
-      perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
-      perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
+      perform_learning("RF", trainset.multinomial, testset.multinomial, tune = TRUE)
       # Part 4.3.1.2: Perform analysis
         # Part 4.3.1.2.1: Do ensemble of all learning methods
-        learn.gf.auto <- perform_learning("auto", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.gf.auto <- perform_learning("auto", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.2: Naive Bayes
-        learn.gf.nb <- perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.gf.nb <- perform_learning("NB", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.3: KNN
-        learn.gf.knn <- perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.gf.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.4: SVM
-        learn.gf.svm <- perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = 'laplacedot', svm.cost = 10)
+        learn.gf.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 10)
         # Part 4.3.1.2.5: Logistic Regression
-        learn.gf.log <- perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.gf.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.6: Discriminant Analysis
-        learn.gf.da <- perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.gf.da <- perform_learning("DA", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.7: Decision Tree
-        learn.gf.dt <- perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        learn.gf.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
         # Part 4.3.1.2.8: Random Forest
-        learn.gf.rf <- perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], rf.ntree = 201, rf.mtry = 10)
+        learn.gf.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
     # Part 4.3.2: PCA Dataset
-      features.selected <- c(features.pca, "diagnosis")
+    data.binomial <- createDataset(data.pp, features.pca, huex.probes, "PCA")
+    sets <- buildTrainTest(data.binomial)
+    trainset.binomial <- sets$trainset
+    testset.binomial <- sets$testset
+    remove(sets)
       # Part 4.3.2.1: Perform tuning for SVM and Random Forest
-      perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
-      perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
+      perform_learning("RF", trainset.multinomial, testset.multinomial, tune = TRUE)
       # Part 4.3.2.2: Perform analysis
         # Part 4.3.2.2.1: Do ensemble of all learning methods
-        learn.pca.auto <- perform_learning("auto", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.pca.auto <- perform_learning("auto", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.2: Naive Bayes
-        learn.pca.nb <- perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.pca.nb <- perform_learning("NB", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.3: KNN
-        learn.pca.knn <- perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.pca.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.4: SVM (For PCA, SVM tuning had no significant features)
-        #learn.pca.svm <- perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = 'laplacedot', svm.cost = 10)
+        #learn.pca.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 10)
         # Part 4.3.2.2.5: Logistic Regression
-        learn.pca.log <- perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.pca.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.6: Discriminant Analysis
-        learn.pca.da <- perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.pca.da <- perform_learning("DA", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.7: Decision Tree
-        learn.pca.dt <- perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        learn.pca.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
         # Part 4.3.2.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
-        #learn.pca.rf <- perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], rf.ntree = 201, rf.mtry = 10)
+        #learn.pca.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
     # Part 4.3.3: Combined Dataset
-      features.selected <- c(features, "diagnosis")
+    data.multinomial <- createDataset(data.pp, features, huex.probes, "")
+    sets <- buildTrainTest(data.multinomial)
+    trainset.multinomial <- sets$trainset
+    testset.multinomial <- sets$testset
+    remove(sets)
       # Part 4.3.3.1: Perform tuning for SVM and Random Forest
-      perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
-      perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], tune = TRUE)
+      perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
+      perform_learning("RF", trainset.multinomial, testset.multinomial, tune = TRUE)
       # Part 4.3.3.2: Perform analysis
         # Part 4.3.3.2.1: Do ensemble of all learning methods
-        learn.features.auto <- perform_learning("auto", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.features.auto <- perform_learning("auto", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.2: Naive Bayes
-        learn.features.nb <- perform_learning("NB", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.features.nb <- perform_learning("NB", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.3: KNN
-        learn.features.knn <- perform_learning("KNN", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.features.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.4: SVM
-        learn.features.svm <- perform_learning("SVM", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], svm.kernel = 'laplacedot', svm.cost = 100)
+        learn.features.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 100)
         # Part 4.3.3.2.5: Logistic Regression
-        learn.features.log <- perform_learning("LOG", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.features.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.6: Discriminant Analysis
-        learn.features.da <- perform_learning("DA", trainset.multinomial[, features.selected], testset.multinomial[, features.selected])
+        learn.features.da <- perform_learning("DA", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.7: Decision Tree
-        learn.features.dt <- perform_learning("DT", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        learn.features.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
         # Part 4.3.3.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
-        #learn.features.rf <- perform_learning("RF", trainset.multinomial[, features.selected], testset.multinomial[, features.selected], rf.ntree = 201, rf.mtry = 10)
+        #learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
