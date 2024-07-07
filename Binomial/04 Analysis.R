@@ -1,4 +1,6 @@
 # Part 4: Machine Learning
+exportsubdir <- "Step 4 - Analysis"
+dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
   # Part 4.1: Compute the alpha using Bonferroni
   alpha <- get_alpha(alpha, nrow(data.binomial) - 1)
   # Part 4.2: Create a function for each ML
@@ -86,45 +88,31 @@
       # For SVM and random forest, cut the dataset to 10% of the dataset to make processing quicker
       #trainset.cut <- trainset[sample(x = 1:nrow(trainset), size = nrow(trainset) * .10, replace = TRUE), colnames(trainset)] 
       #trainset.cut <- upSample(x = trainset.cut[, colnames(trainset.cut) %ni% "ADDEPEV3"], yname = "ADDEPEV3", y = trainset.cut$ADDEPEV3)
-      if (tune) {
-        kernels <- c("rbfdot", "polydot", "tanhdot", "vanilladot", "laplacedot", "besseldot", "anovadot", "splinedot")
-        costs <- c(0.001, 0.01, 0.1, 1, 5, 10, 100)
-      } else {
-        kernels <- c(svm.kernel)
-        costs <- c(svm.cost)
+      model.svm <- rminer::fit(diagnosis ~ ., 
+                               data = trainset, 
+                               model = "ksvm",
+                               kpar = "automatic",
+                               task = "class",
+                               search = list(search = mparheuristic("ksvm", n = 5))
+      )
+      pred.model.svm <- predict(model.svm, newdata = testset)
+      confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset$diagnosis)
+      if (tune && confMatrix.model.svm$overall['AccuracyPValue'] < 0.05) {
+        print(paste(kernel," @ ", cost))
+        print(confMatrix.model.svm)
       }
-      
-      for (kernel in kernels) {
-        for (cost in costs) {
-          model.svm <- rminer::fit(diagnosis ~ ., 
-                                   data = trainset, 
-                                   model = "svm",
-                                   kernel = kernel,
-                                   kpar = "automatic", 
-                                   C = cost,
-                                   task = "class"
-          )
-          pred.model.svm <- predict(model.svm, newdata = testset)
-          confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset$diagnosis)
-          if (tune && confMatrix.model.svm$overall['AccuracyPValue'] < 0.05) {
-            print(paste(kernel," @ ", cost))
-            print(confMatrix.model.svm)
-          }
-          var.model.svm <- Importance(model.svm, data = trainset)
-          if (!tune) {
-            roc.model.svm <- multiclass.roc(response = testset$diagnosis, 
-                                            predictor = predict(rminer::fit(diagnosis ~ ., 
-                                                                            data = trainset, 
-                                                                            model = "svm",
-                                                                            kernel = kernel,
-                                                                            kpar = "automatic", 
-                                                                            C = cost
-                                            ), 
-                                            newdata = testset[, colnames(testset) != "diagnosis"], 
-                                            type = "prob"),
-                                            percent = TRUE)
-          }
-        }
+      var.model.svm <- Importance(model.svm, data = trainset)
+      if (!tune) {
+        roc.model.svm <- multiclass.roc(response = testset$diagnosis, 
+                                        predictor = predict(rminer::fit(diagnosis ~ ., 
+                                                                        data = trainset, 
+                                                                        model = "svm",
+                                                                        kpar = "automatic",
+                                                                        search = list(search = mparheuristic("ksvm", n = 5))
+                                        ), 
+                                        newdata = testset[, colnames(testset) != "diagnosis"], 
+                                        type = "prob"),
+                                        percent = TRUE)
       }
       
       if (!tune) {
@@ -174,20 +162,34 @@
     } else if (method == "RF") {
       # Part 4.7: Random Forest
       set.seed(100)
+      # tuneRF 
+      invisible(capture.output(fgl.res <- tuneRF(x = trainset[, colnames(trainset) != "diagnosis"],
+                                                 y = trainset$diagnosis, 
+                                                 stepFactor=1.5)
+                               )
+                )
+      
+      # choose the best mtry based on the lowest OOB error
+      best_mtry <- fgl.res[fgl.res[, 2] == min(fgl.res[, 2]), 1]
+      # choose the lowest OOB error
+      best_oob  <- fgl.res[fgl.res[, 2] == min(fgl.res[, 2]), 2]
+      
       if (tune) {
-        mtries <- sort.int(sample(ncol(trainset)-1, 5))
-        ntrees <- c(201, 501, 1501, 2501, 3501)
+        ntrees <- seq.int(3001, 4001,  by = 100)
       } else {
-        mtries <- c(rf.mtry)
         ntrees <- c(rf.ntree)
       }
+      
+      mtries <- c(best_mtry)
+      
       
       for(ntree in ntrees) {
         for(mtry in mtries) {
           model.rf <- randomForest(x = trainset[, colnames(trainset) != "diagnosis"],
                                    y = trainset$diagnosis, 
                                    ntree = ntree, 
-                                   mtry = mtry
+                                   mtry = mtry,
+                                   oob.error=best_oob
           )
           pred.model.rf <- predict(model.rf, newdata = testset)
           if (!tune) {
@@ -244,7 +246,7 @@
 
   # Part 4.3: Perform ML
     # Part 4.3.1: Gene Filtering Dataset
-    data.binomial <- createDataset(data.pp, features.gf, huex.probes, "Gene Filtering")
+    data.binomial <- createDataset(dataSource = data.pp, feature = features.gf, probeset = huex.probes, filename = "Gene Filtering")
     sets <- buildTrainTest(data.binomial)
     trainset.binomial <- sets$trainset
     testset.binomial <- sets$testset
@@ -259,18 +261,18 @@
         learn.gf.nb <- perform_learning("NB", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.3: KNN
         learn.gf.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
-        # Part 4.3.1.2.4: SVM
-        #learn.gf.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'laplacedot', svm.cost = 10)
+        # Part 4.3.1.2.4: SVM 
+        #learn.gf.svm <- perform_learning("SVM", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.5: Logistic Regression
         learn.gf.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.6: Discriminant Analysis
         learn.gf.da <- perform_learning("DA", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.7: Decision Tree
-        learn.gf.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
-        # Part 4.3.1.2.8: Random Forest
-        #learn.gf.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 201, rf.mtry = 10)
+        learn.gf.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (Gene Filter).pdf", sep = "/"))
+        # Part 4.3.1.2.8: Random Forest 
+        #learn.gf.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 100001)
       # Part 4.3.2: PCA Dataset
-      data.binomial <- createDataset(data.pp, features.pca, huex.probes, "PCA")
+      data.binomial <- createDataset(dataSource = data.pp, feature = features.pca, probeset = huex.probes, filename = "PCA")
       sets <- buildTrainTest(data.binomial)
       trainset.binomial <- sets$trainset
       testset.binomial <- sets$testset
@@ -292,11 +294,11 @@
           # Part 4.3.2.2.6: Discriminant Analysis
           learn.pca.da <- perform_learning("DA", trainset.binomial, testset.binomial)
           # Part 4.3.2.2.7: Decision Tree
-          learn.pca.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+          learn.pca.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (PCA).pdf", sep = "/"))
           # Part 4.3.2.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
           #learn.pca.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 201, rf.mtry = 10)
     # Part 4.3.3: Combined Dataset
-    data.binomial <- createDataset(data.pp, features, huex.probes, "")
+    data.binomial <- createDataset(dataSource = data.pp, feature = features, probeset = huex.probes, filename = "PCA + GF")
     sets <- buildTrainTest(data.binomial)
     trainset.binomial <- sets$trainset
     testset.binomial <- sets$testset
@@ -318,6 +320,6 @@
         # Part 4.3.3.2.6: Discriminant Analysis
         learn.features.da <- perform_learning("DA", trainset.binomial, testset.binomial)
         # Part 4.3.3.2.7: Decision Tree
-        learn.features.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        learn.features.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
         # Part 4.3.3.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
         #learn.features.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 201, rf.mtry = 10)

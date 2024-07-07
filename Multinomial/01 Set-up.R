@@ -1,9 +1,11 @@
 # Part 1: Setting up
+exportsubdir <- "Part 1 - Setup"
 # Part 1.1: Sets the location of the data to be used and where the packages should be put
 datadir <- "E:/jmcco/Downloads/BNF 300.2 Data/GSE208338_RAW/"
 #probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/Affymetrix_HuEx/"
 probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/HuEx-1_0-st-v2-na36-hg19 Probeset/"
 setwd(datadir)
+exportdir <- paste(dirname(rstudioapi::getSourceEditorContext()$path), "/Export", sep = "")
 package_loc <- paste(datadir, "lib", sep = "")
 
 # Part 1.2: Package and library installations

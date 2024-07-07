@@ -1,4 +1,6 @@
 # Part 4: Machine Learning
+exportsubdir <- "Step 4 - Analysis"
+dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
   # Part 4.1: Compute the alpha using Bonferroni
   alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
   # Part 4.2: Create a function for each ML
@@ -248,10 +250,10 @@
   
   # Part 4.3: Perform ML
     # Part 4.3.1: Gene Filtering Dataset
-    data.binomial <- createDataset(data.pp, features.gf, huex.probes, "Gene Filtering")
-    sets <- buildTrainTest(data.binomial)
-    trainset.binomial <- sets$trainset
-    testset.binomial <- sets$testset
+    data.multinomial <- createDataset(dataSource = data.pp, feature = features.gf, probeset = huex.probes, filename = "Gene Filtering")
+    sets <- buildTrainTest(data.multinomial)
+    trainset.multinomial <- sets$trainset
+    testset.multinomial <- sets$testset
     remove(sets)
       # Part 4.3.1.1: Perform tuning for SVM and Random Forest
       perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
@@ -270,14 +272,14 @@
         # Part 4.3.1.2.6: Discriminant Analysis
         learn.gf.da <- perform_learning("DA", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.7: Decision Tree
-        learn.gf.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        learn.gf.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (Gene Filter).pdf", sep = "/"))
         # Part 4.3.1.2.8: Random Forest
         learn.gf.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
     # Part 4.3.2: PCA Dataset
-    data.binomial <- createDataset(data.pp, features.pca, huex.probes, "PCA")
-    sets <- buildTrainTest(data.binomial)
-    trainset.binomial <- sets$trainset
-    testset.binomial <- sets$testset
+    data.multinomial <- createDataset(dataSource = data.pp, feature = features.pca, probeset = huex.probes, filename = "PCA")
+    sets <- buildTrainTest(data.multinomial)
+    trainset.multinomial <- sets$trainset
+    testset.multinomial <- sets$testset
     remove(sets)
       # Part 4.3.2.1: Perform tuning for SVM and Random Forest
       perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
@@ -296,11 +298,11 @@
         # Part 4.3.2.2.6: Discriminant Analysis
         learn.pca.da <- perform_learning("DA", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.7: Decision Tree
-        learn.pca.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
+        learn.pca.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (PCA).pdf", sep = "/"))
         # Part 4.3.2.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
         #learn.pca.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
     # Part 4.3.3: Combined Dataset
-    data.multinomial <- createDataset(data.pp, features, huex.probes, "")
+    data.multinomial <- createDataset(dataSource = data.pp, feature = features, probeset = huex.probes, filename = "PCA + GF")
     sets <- buildTrainTest(data.multinomial)
     trainset.multinomial <- sets$trainset
     testset.multinomial <- sets$testset
@@ -316,12 +318,13 @@
         # Part 4.3.3.2.3: KNN
         learn.features.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.4: SVM
-        learn.features.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 100)
+        learn.features.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 0.1)
         # Part 4.3.3.2.5: Logistic Regression
         learn.features.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.6: Discriminant Analysis
         learn.features.da <- perform_learning("DA", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.7: Decision Tree
-        learn.features.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(datadir, "../Export/Decision Tree (Gene Filter).pdf", sep = ""))
-        # Part 4.3.3.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
-        #learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
+        learn.features.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
+        # Part 4.3.3.2.8: Random Forest  
+        learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 1501, rf.mtry = 10)
+        

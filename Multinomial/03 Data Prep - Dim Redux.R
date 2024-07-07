@@ -1,4 +1,6 @@
 # Part 3: Data Preparation
+exportsubdir <- "Step 3 - Dim Redux"
+dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
   # Part 3.1: Gene Filtering
     # Part 3.1.1: Coefficient of Variation (cv)
     # cv = 1 - standard deviation equals the mean, so that the experimental effect is small relative to the precision of measurement. If,
@@ -47,17 +49,23 @@
       remove(data.gf, model.gf)
     # Part 3.1.6: Put to HTML the names of the features
     atab <- aafTableAnn(features.gf, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
-    saveHTML(atab, file=paste(datadir, "../Export/Gene Filtering Probe Names.html", sep = ""))
+    saveHTML(atab, file=paste(exportdir, exportsubdir, "Gene Filtering Probe Names.html", sep = "/"))
     # Part 3.1.7: Create a correlation matrix across each features
     features.gf.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.gf, ])))
     corrplot(features.gf.corr$r)
     
-    # Part 3.1.6: create Venn diagram and display all sets 
+    # Part 3.1.8: create Venn diagram and display all sets 
     ggvenn(list('Coefficient of Variance' = features.gf.1, 
                 'T-Test' = features.gf.2, 
                 'ANOVA' = features.gf.3),
            digits = 2
     )
+    
+    # Step 3.1.9: Export
+    write.csv(features.gf.1, paste(exportdir, exportsubdir, "Features (Gene Filter - COV).csv", sep = "/"), row.names = TRUE)
+    write.csv(features.gf.2, paste(exportdir, exportsubdir, "Features (Gene Filter - T-test).csv", sep = "/"), row.names = TRUE)
+    write.csv(features.gf.3, paste(exportdir, exportsubdir, "Features (Gene Filter - ANOVA).csv", sep = "/"), row.names = TRUE)
+    write.csv(features.gf, paste(exportdir, exportsubdir, "Features (Gene Filter - Combined).csv", sep = "/"), row.names = TRUE)
     
   # Part 3.2: Principal Component Analysis
     # Step 3.2.1: Check for null values (If it returned more than 0, there is a null value)
@@ -77,7 +85,7 @@
     # Step 3.2.5: Get the loadings
     model.pca.important <- as.data.frame(model.pca$loadings[, 1:pca.loadings.min])
     # Step 3.2.6: Export
-    write.csv(model.pca.important, paste(datadir, "../Export/model.pca.important.csv", sep = ""), row.names = TRUE)
+    write.csv(model.pca.important, paste(exportdir, exportsubdir, "PCA Important Loadings.csv", sep = "/"), row.names = TRUE)
     # Step 3.2.7: Visualize PCA
       # Step 3.2.7.1: Scree plot to see where to cut the data
       screeplot(model.pca,
@@ -164,7 +172,7 @@
       remove(data.pca, model.pca)
     # Part 3.2.13: Put to HTML the names of the features
     atab <- aafTableAnn(features.pca, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
-    saveHTML(atab, file=paste(datadir, "../Export/PCA Probe Names.html", sep = ""))
+    saveHTML(atab, file=paste(exportdir, exportsubdir, "PCA Probe Names.html", sep = "/"))
     # Part 3.2.14: Create a correlation matrix across each features
     features.pca.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.pca, ])))
     corrplot(features.pca.corr$r)
@@ -175,6 +183,10 @@
                 ),
            digits = 2
     )
+    # Step 3.2.16: Export
+    write.csv(features.pca.1, paste(exportdir, exportsubdir, "Features (PCA - plotloadings).csv", sep = "/"), row.names = TRUE)
+    write.csv(features.pca.2, paste(exportdir, exportsubdir, "Features (PCA - Fviz).csv", sep = "/"), row.names = TRUE)
+    write.csv(features.pca, paste(exportdir, exportsubdir, "Features (Gene Filter - Combined).csv", sep = "/"), row.names = TRUE)
     
   # Step 3.3: Combine the features from Gene Filtering and PCA
   features <- unique(c(features.gf, features.pca))
@@ -193,16 +205,18 @@
     # Part 3.3.4: Put to HTML the names of the features
     atab <- aafTableAnn(features.pca, "pd.huex.1.0.st.v2", aaf.handler()[c(1:3,8:9,11:13)])
     saveHTML(atab, file=paste(datadir, "../Export/GF + PCA Probe Names.html", sep = ""))
-    # Part 3.2.14: Create a correlation matrix across each features
+    # Part 3.3.5: Create a correlation matrix across each features
     features.corr <- rcorr(as.matrix(t(exprs(data.pp)[features, ])))
     corrplot(features.corr$r)
     
-    # Step 3.2.15: create Venn diagram and display all sets 
+    # Step 3.3.6: create Venn diagram and display all sets 
     ggvenn(list('Gene Filter' = features.gf, 
                 'PCA' = features.pca
-    ),
-    digits = 2
+          ),
+          digits = 2
     )
+    # Step 3.3.7: Export
+    write.csv(features, paste(exportdir, exportsubdir, "Features (GF + PCA).csv", sep = "/"), row.names = TRUE)
     
   # Part 3.4: Get probe profiles and annotations
     # This part was done using Ensemble Biomart with following specifications:
@@ -235,8 +249,8 @@
       data$diagnosis <- factor(data$diagnosis, ordered = FALSE)
       
       # Step 3.4.4: Export
-      write.csv(data, paste(datadir, "../Export/" , filename , " Chosen Dataset.csv", sep = ""), row.names = TRUE)
-      write.csv(huex.probes, paste(datadir, "../Export/" , filename , " Chosen Probes.csv", sep = ""), row.names = TRUE)
+        write.csv(data, paste(exportdir, exportsubdir, paste(filename, "Chosen Dataset.csv", sep = ""), sep = "/"), row.names = TRUE)
+        write.csv(huex.probes, paste(exportdir, exportsubdir, paste(filename, "Chosen Dataset.csv", sep = ""), sep = "/"), row.names = TRUE)
       
       return(data)
     }
@@ -266,3 +280,6 @@
       q <- paste(sep="","https://biodbnet-abcc.ncifcrf.gov/webServices/rest.php/biodbnetRestApi.json?method=db2db&input=affyid&inputValues=",probe,"&outputs=genesymbol&taxonId=9606&format=row")
       results <- rbind(results,fromJSON(txt=q))
     }
+    # Step 3.6: Export
+    write.csv(features.missed, paste(exportdir, exportsubdir, "Features (Unannotated).csv", sep = "/"), row.names = TRUE)
+    
