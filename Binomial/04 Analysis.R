@@ -20,11 +20,12 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                         trControl = trainControl(method='cv', number=10)
       )
       pred.model.nb <- predict(model.nb, newdata = testset[, colnames(trainset) != "diagnosis"])
-      roc.model.nb <- multiclass.roc(response = testset$diagnosis, 
-                                     predictor = predict(model.nb, 
-                                                         newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                         type = "prob"),
-                                     percent = TRUE)
+      roc.model.nb <- auc(actual = testset$diagnosis, 
+                          predicted = predict(model.nb, 
+                                             newdata = testset[, colnames(testset) != "diagnosis"], 
+                                             type = "raw"
+                                      )
+                          )
       confMatrix.model.nb <- confusionMatrix(pred.model.nb, testset$diagnosis)
       var.model.nb <- varImp(model.nb, useModel = TRUE, nonpara = TRUE, scale = TRUE)
       return(list(model = model.nb, pred = pred.model.nb, confMatrix = confMatrix.model.nb, var = var.model.nb, roc = roc.model.nb))
@@ -40,11 +41,12 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                          tuneLength = 20
       )
       pred.model.knn <- predict(model.knn, newdata = testset)
-      roc.model.knn <- multiclass.roc(response = testset$diagnosis, 
-                                      predictor = predict(model.knn, 
-                                                          newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                          type = "prob"),
-                                      percent = TRUE)
+      roc.model.knn <- auc(actual = testset$diagnosis, 
+                          predicted = predict(model.knn, 
+                                              newdata = testset[, colnames(testset) != "diagnosis"], 
+                                              type = "raw"
+                                      )
+                        )
       confMatrix.model.knn <- confusionMatrix(pred.model.knn, testset$diagnosis)
       var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
       return(list(model = model.knn, pred = pred.model.knn, confMatrix = confMatrix.model.knn, var = var.model.knn, roc = roc.model.knn))
@@ -76,11 +78,12 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                         trControl = trControl.dt
       )
       pred.model.dt <- predict(model.dt, newdata = testset)
-      roc.model.dt <- multiclass.roc(response = testset$diagnosis, 
-                                     predictor = predict(model.dt, 
-                                                         newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                         type = "prob"),
-                                     percent = TRUE)
+      roc.model.dt <- auc(actual = testset$diagnosis, 
+                          predicted = predict(model.dt, 
+                                              newdata = testset[, colnames(testset) != "diagnosis"], 
+                                              type = "raw"
+                          )
+                      )
       confMatrix.model.dt <- confusionMatrix(pred.model.dt, testset$diagnosis)
       return(list(model = model.dt, pred = pred.model.dt, confMatrix = confMatrix.model.dt, var = var.model.dt, roc = roc.model.dt))
     } else if (method == "SVM") {
@@ -97,26 +100,22 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       )
       pred.model.svm <- predict(model.svm, newdata = testset)
       confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset$diagnosis)
-      if (tune && confMatrix.model.svm$overall['AccuracyPValue'] < 0.05) {
+      if (tune) {
         print(paste(kernel," @ ", cost))
         print(confMatrix.model.svm)
       }
       var.model.svm <- Importance(model.svm, data = trainset)
       if (!tune) {
-        roc.model.svm <- multiclass.roc(response = testset$diagnosis, 
-                                        predictor = predict(rminer::fit(diagnosis ~ ., 
-                                                                        data = trainset, 
-                                                                        model = "svm",
-                                                                        kpar = "automatic",
-                                                                        search = list(search = mparheuristic("ksvm", n = 5))
-                                        ), 
-                                        newdata = testset[, colnames(testset) != "diagnosis"], 
-                                        type = "prob"),
-                                        percent = TRUE)
+        roc.model.svm <- auc(actual = testset$diagnosis, 
+                              predicted = predict(model.svm, 
+                                                  newdata = testset[, colnames(testset) != "diagnosis"], 
+                                                  type = "raw"
+                              )
+                          )
       }
       
       if (!tune) {
-        return(list(model = model.nb, pred = pred.model.nb, confMatrix = confMatrix.model.nb, var = var.model.nb, roc = roc.model.svm))
+        return(list(model = model.svm, pred = pred.model.svm, confMatrix = confMatrix.model.svm, var = var.model.svm, roc = roc.model.svm))
       }
     } else if (method == "LOG") {
       model.logit <- multinom(diagnosis ~ .,
@@ -127,6 +126,12 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                                             newdata = testset[, colnames(testset) != "diagnosis"], 
                                                             type = "prob"),
                                         percent = TRUE)
+      roc.model.logit <- auc(actual = testset$diagnosis, 
+                             predicted = predict(model.logit, 
+                                                 newdata = testset[, colnames(testset) != "diagnosis"], 
+                                                 type = "probs"
+                             )
+                          )
       confMatrix.model.logit <- confusionMatrix(pred.model.logit, testset$diagnosis)
       var.model.logit <- varImp(model.logit, useModel = TRUE, nonpara = TRUE, scale = TRUE)
       
@@ -151,11 +156,16 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                        data = trainset,
       )
       pred.model.lda <- predict(model.lda, newdata = testset)
-      roc.model.lda <- multiclass.roc(response = testset$diagnosis, 
-                                      predictor = predict(model.lda, 
-                                                          newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                          type = "prob")$posterior,
-                                      percent = TRUE)
+      print(predict(model.lda, 
+                                                newdata = testset[, colnames(testset) != "diagnosis"], 
+                                                type = "raw"
+                            )$posterior[,2])
+      roc.model.lda <- auc(actual = testset$diagnosis, 
+                            predicted = predict(model.lda, 
+                                                newdata = testset[, colnames(testset) != "diagnosis"], 
+                                                type = "raw"
+                            )$posterior[,2]
+                        )
       confMatrix.model.lda <- confusionMatrix(pred.model.lda$class, testset$diagnosis)
       #return(list(model = model.lda, pred = pred.model.lda, confMatrix = confMatrix.model.lda, var = var.model.lda))
       return(list(model = model.lda, pred = pred.model.lda, confMatrix = confMatrix.model.lda, var = var.model.lda, roc = roc.model.lda))
@@ -193,14 +203,15 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
           )
           pred.model.rf <- predict(model.rf, newdata = testset)
           if (!tune) {
-            roc.model.rf <- multiclass.roc(response = testset$diagnosis, 
-                                           predictor = predict(model.rf, 
-                                                               newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                               type = "prob"),
-                                           percent = TRUE)
+            roc.model.rf <- auc(actual = testset$diagnosis, 
+                                predicted = predict(model.rf, 
+                                                    newdata = testset[, colnames(testset) != "diagnosis"], 
+                                                    type = "response"
+                                )
+                            )
           }
           confMatrix.model.rf <- confusionMatrix(pred.model.rf, testset$diagnosis)
-          if (tune && confMatrix.model.rf$overall['AccuracyPValue'] < 0.05) {
+          if (tune) {
             print(paste(ntree," and ", mtry))
             print(confMatrix.model.rf)
           }
@@ -229,17 +240,13 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                 )
       )
       pred.model.auto <- predict(model.auto, testset)
-      roc.model.auto <- multiclass.roc(response = testset$diagnosis, 
-                                       predictor = predict(model.auto, 
-                                                           newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                           type = "prob"),
-                                       percent = TRUE)
+      roc.model.auto <- round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"), 2)
       var.model.auto <- Importance(model.auto, data = trainset, method = "DSA")
       # show leaderboard:
       cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
       cat("Best model:", model.auto@model, "\n")
-      cat("AUC", "=", round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"),2), "\n")
+      cat("AUC", "=", roc.model.auto, "\n")
       return(list(model = model.auto, pred = pred.model.auto, confMatrix = c(), var = var.model.auto, roc = roc.model.auto))
     }
   }
@@ -262,7 +269,9 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.1.2.3: KNN
         learn.gf.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.4: SVM 
-        #learn.gf.svm <- perform_learning("SVM", trainset.binomial, testset.binomial)
+        learn.gf.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'splinedot', svm.cost = 100)
+        learn.gf.svm$var <- data.frame('feature' = features.gf, "Overall" = learn.gf.svm$var$imp[-1])
+        learn.gf.svm$var <- learn.gf.svm$var[order(-learn.gf.svm$var$Overall), ]
         # Part 4.3.1.2.5: Logistic Regression
         learn.gf.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.6: Discriminant Analysis
@@ -270,7 +279,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.1.2.7: Decision Tree
         learn.gf.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (Gene Filter).pdf", sep = "/"))
         # Part 4.3.1.2.8: Random Forest 
-        #learn.gf.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 100001)
+        learn.gf.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 100001)
       # Part 4.3.2: PCA Dataset
       data.binomial <- createDataset(dataSource = data.pp, feature = features.pca, probeset = huex.probes, filename = "PCA")
       sets <- buildTrainTest(data.binomial)
@@ -288,7 +297,9 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
           # Part 4.3.2.2.3: KNN
           learn.pca.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
           # Part 4.3.2.2.4: SVM (For PCA, SVM tuning had no significant features)
-          #learn.pca.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'laplacedot', svm.cost = 10)
+          learn.pca.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'splinedot', svm.cost = 100)
+          learn.pca.svm$var <- data.frame('feature' = features.pca, "Overall" = learn.pca.svm$var$imp[-1])
+          learn.pca.svm$var <- learn.pca.svm$var[order(-learn.pca.svm$var$Overall), ]
           # Part 4.3.2.2.5: Logistic Regression
           learn.pca.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
           # Part 4.3.2.2.6: Discriminant Analysis
@@ -296,7 +307,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
           # Part 4.3.2.2.7: Decision Tree
           learn.pca.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (PCA).pdf", sep = "/"))
           # Part 4.3.2.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
-          #learn.pca.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 201, rf.mtry = 10)
+          learn.pca.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 3501, rf.mtry = 5)
     # Part 4.3.3: Combined Dataset
     data.binomial <- createDataset(dataSource = data.pp, feature = features, probeset = huex.probes, filename = "PCA + GF")
     sets <- buildTrainTest(data.binomial)
@@ -314,7 +325,9 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.3.2.3: KNN
         learn.features.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
         # Part 4.3.3.2.4: SVM
-        learn.features.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'laplacedot', svm.cost = 100)
+        learn.features.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'splinedot', svm.cost = 100)
+        learn.features.svm$var <- data.frame('feature' = features, "Overall" = learn.features.svm$var$imp[-1])
+        learn.features.svm$var <- learn.features.svm$var[order(-learn.features.svm$var$Overall), ]
         # Part 4.3.3.2.5: Logistic Regression
         learn.features.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
         # Part 4.3.3.2.6: Discriminant Analysis
@@ -322,4 +335,5 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.3.2.7: Decision Tree
         learn.features.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
         # Part 4.3.3.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
-        #learn.features.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 201, rf.mtry = 10)
+        learn.features.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 3201, rf.mtry = 13)
+        

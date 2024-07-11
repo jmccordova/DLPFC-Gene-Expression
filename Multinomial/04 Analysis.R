@@ -108,12 +108,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                        )
           pred.model.svm <- predict(model.svm, newdata = testset)
           confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset$diagnosis)
-          if (tune && confMatrix.model.svm$overall['AccuracyPValue'] < 0.05) {
-            print(paste(kernel," @ ", cost))
-            print(confMatrix.model.svm)
-          }
           var.model.svm <- Importance(model.svm, data = trainset)
-          if (!tune) {
+          #if (!tune) {
           roc.model.svm <- multiclass.roc(response = testset$diagnosis, 
                                           predictor = predict(rminer::fit(diagnosis ~ ., 
                                                                           data = trainset, 
@@ -125,12 +121,21 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                                               newdata = testset[, colnames(testset) != "diagnosis"], 
                                                               type = "prob"),
                                           percent = TRUE)
+          #}
+          
+          
+          #if (tune && confMatrix.model.svm$overall['AccuracyPValue'] < 0.05) {
+          if (tune) {
+            print(paste(kernel," @ ", cost))
+            print(confMatrix.model.svm$overall['Accuracy'])
+            print(confMatrix.model.svm$overall['AccuracyPValue'])
+            print(roc.model.svm$auc)
           }
         }
       }
       
       if (!tune) {
-        return(list(model = model.nb, pred = pred.model.nb, confMatrix = confMatrix.model.nb, var = var.model.nb, roc = roc.model.svm))
+        return(list(model = model.svm, pred = pred.model.svm, confMatrix = confMatrix.model.svm, var = var.model.svm, roc = roc.model.svm))
       }
     } else if (method == "LOG") {
       model.logit <- multinom(diagnosis ~ .,
@@ -196,17 +201,21 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                    mtry = mtry
           )
           pred.model.rf <- predict(model.rf, newdata = testset)
-          if (!tune) {
+          #if (!tune) {
           roc.model.rf <- multiclass.roc(response = testset$diagnosis, 
                                           predictor = predict(model.rf, 
                                                               newdata = testset[, colnames(testset) != "diagnosis"], 
                                                               type = "prob"),
                                           percent = TRUE)
-          }
+          #}
           confMatrix.model.rf <- confusionMatrix(pred.model.rf, testset$diagnosis)
-          if (tune && confMatrix.model.rf$overall['AccuracyPValue'] < 0.05) {
+          
+          #if (tune && confMatrix.model.rf$overall['AccuracyPValue'] < 0.05) {
+          if (tune) {
             print(paste(ntree," and ", mtry))
-            print(confMatrix.model.rf)
+            print(confMatrix.model.rf$overall['Accuracy'])
+            print(confMatrix.model.rf$overall['AccuracyPValue'])
+            print(roc.model.rf$auc)
           }
           var.model.rf <- varImp(model.rf, useModel = TRUE, nonpara = TRUE, scale = TRUE)
           var.model.rf <- arrange(var.model.rf, desc(Overall))
@@ -266,7 +275,9 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.1.2.3: KNN
         learn.gf.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.4: SVM
-        learn.gf.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 10)
+        learn.gf.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 100)
+        learn.gf.svm$var <- data.frame('feature' = features.gf, "Overall" = learn.gf.svm$var$imp[-1])
+        learn.gf.svm$var <- learn.gf.svm$var[order(-learn.gf.svm$var$Overall), ]
         # Part 4.3.1.2.5: Logistic Regression
         learn.gf.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.6: Discriminant Analysis
@@ -292,7 +303,9 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.2.2.3: KNN
         learn.pca.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.4: SVM (For PCA, SVM tuning had no significant features)
-        #learn.pca.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 10)
+        learn.pca.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'rbfdot', svm.cost = 1)
+        learn.pca.svm$var <- data.frame('feature' = features.pca, "Overall" = learn.pca.svm$var$imp[-1])
+        learn.pca.svm$var <- learn.pca.svm$var[order(-learn.pca.svm$var$Overall), ]
         # Part 4.3.2.2.5: Logistic Regression
         learn.pca.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.6: Discriminant Analysis
@@ -300,7 +313,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.2.2.7: Decision Tree
         learn.pca.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (PCA).pdf", sep = "/"))
         # Part 4.3.2.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
-        #learn.pca.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
+        learn.pca.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 501, rf.mtry = 6)
     # Part 4.3.3: Combined Dataset
     data.multinomial <- createDataset(dataSource = data.pp, feature = features, probeset = huex.probes, filename = "PCA + GF")
     sets <- buildTrainTest(data.multinomial)
@@ -319,6 +332,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.4: SVM
         learn.features.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 0.1)
+        learn.features.svm$var <- data.frame('feature' = features, "Overall" = learn.features.svm$var$imp[-1])
+        learn.features.svm$var <- learn.features.svm$var[order(-learn.features.svm$var$Overall), ]
         # Part 4.3.3.2.5: Logistic Regression
         learn.features.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.6: Discriminant Analysis
