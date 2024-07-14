@@ -26,7 +26,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                                          type = "prob"),
                                      percent = TRUE)
       confMatrix.model.nb <- confusionMatrix(pred.model.nb, testset$diagnosis)
-      var.model.nb <- varImp(model.nb, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.nb <- varImp(model.nb, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.nb <- varImp(model.nb, scale = FALSE)
       return(list(model = model.nb, pred = pred.model.nb, confMatrix = confMatrix.model.nb, var = var.model.nb, roc = roc.model.nb))
     } else if (method == "KNN") {
       # Part 4.2: K Nearest Neighbors
@@ -46,7 +47,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                                          type = "prob"),
                                      percent = TRUE)
       confMatrix.model.knn <- confusionMatrix(pred.model.knn, testset$diagnosis)
-      var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.knn <- varImp(model.knn, scale = FALSE)
       return(list(model = model.knn, pred = pred.model.knn, confMatrix = confMatrix.model.knn, var = var.model.knn, roc = roc.model.knn))
     } else if (method == "DT") {
       # Part 4.3: Decision Tree
@@ -56,7 +58,11 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                           method = "class", 
                           control = rpart.control(minsplit=2, minbucket = 1, cp = 0.001)
         )
-        var.model.dt<- varImp(model.dt, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+        #var.model.dt<- varImp(model.dt, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+        var.model.dt <- varImp(model.dt, scale = FALSE)
+        var.model.dt <- data.frame("feature" = rownames(var.model.dt), "Overall" = var.model.dt$Overall)
+        var.model.dt <- var.model.dt[var.model.dt$Overall > 0, ]
+        var.model.dt <- var.model.dt[order(-var.model.dt$Overall), ]
         arrange(var.model.dt, desc(Overall))
         rpart.plot(model.dt)
         pdf(export.filename)
@@ -108,7 +114,11 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                        )
           pred.model.svm <- predict(model.svm, newdata = testset)
           confMatrix.model.svm <- confusionMatrix(pred.model.svm, testset$diagnosis)
-          var.model.svm <- Importance(model.svm, data = trainset)
+          var.model.svm <- Importance(model.svm, data = trainset, method = "DSA", outindex = "diagnosis")
+          var.model.svm <- data.frame("feature" = colnames(var.model.svm$data), "Overall" = var.model.svm$imp)
+          var.model.svm <- head(var.model.svm, -1)
+          var.model.svm <- var.model.svm[order(-var.model.svm$Overall),]
+          
           #if (!tune) {
           roc.model.svm <- multiclass.roc(response = testset$diagnosis, 
                                           predictor = predict(rminer::fit(diagnosis ~ ., 
@@ -147,7 +157,10 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                                           type = "prob"),
                                       percent = TRUE)
       confMatrix.model.logit <- confusionMatrix(pred.model.logit, testset$diagnosis)
-      var.model.logit <- varImp(model.logit, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.logit <- varImp(model.logit, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.logit <- varImp(model.logit, scale = FALSE)
+      var.model.logit <- data.frame("feature" = rownames(var.model.logit), "Overall" = var.model.logit$Overall)
+      var.model.logit <- var.model.logit[order(-var.model.logit$Overall), ]
       
       #summary(model.logit)
       #View(cbind("coeff" = coef(model.logit), "odds ratio" = (exp(coef(model.logit)) - 1) * 100)) # Odds ratio
@@ -168,7 +181,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       levels(testset$diagnosis)[match("2",levels(testset$diagnosis))] <- "MDD"
       levels(testset$diagnosis)[match("3",levels(testset$diagnosis))] <- "SCZ"
       levels(testset$diagnosis)[match("9",levels(testset$diagnosis))] <- "CTL"
-      var.model.lda <- varImp(model.lda, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.lda <- varImp(model.lda, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.lda <- varImp(model.lda, scale = FALSE)
       
       model.lda <- lda(diagnosis ~ ., 
                        data = trainset,
@@ -217,7 +231,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
             print(confMatrix.model.rf$overall['AccuracyPValue'])
             print(roc.model.rf$auc)
           }
-          var.model.rf <- varImp(model.rf, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+          #var.model.rf <- varImp(model.rf, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+          var.model.rf <- varImp(model.rf, scale = FALSE)
           var.model.rf <- arrange(var.model.rf, desc(Overall))
         }
       }
@@ -247,7 +262,10 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                                           newdata = testset[, colnames(testset) != "diagnosis"], 
                                                           type = "prob"),
                                       percent = TRUE)
-      var.model.auto <- Importance(model.auto, data = trainset, method = "DSA")
+      var.model.auto <- Importance(model.auto, data = trainset, method = "DSA", outindex = "diagnosis")
+      var.model.auto <- data.frame("feature" = colnames(var.model.auto$data), "Overall" = var.model.auto$imp)
+      var.model.auto <- head(var.model.auto, -1)
+      var.model.auto <- var.model.auto[order(-var.model.auto$Overall),]
       # show leaderboard:
       cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
@@ -276,8 +294,6 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.gf.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.4: SVM
         learn.gf.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 100)
-        learn.gf.svm$var <- data.frame('feature' = features.gf, "Overall" = learn.gf.svm$var$imp[-1])
-        learn.gf.svm$var <- learn.gf.svm$var[order(-learn.gf.svm$var$Overall), ]
         # Part 4.3.1.2.5: Logistic Regression
         learn.gf.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.1.2.6: Discriminant Analysis
@@ -304,8 +320,6 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.pca.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.4: SVM (For PCA, SVM tuning had no significant features)
         learn.pca.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'rbfdot', svm.cost = 1)
-        learn.pca.svm$var <- data.frame('feature' = features.pca, "Overall" = learn.pca.svm$var$imp[-1])
-        learn.pca.svm$var <- learn.pca.svm$var[order(-learn.pca.svm$var$Overall), ]
         # Part 4.3.2.2.5: Logistic Regression
         learn.pca.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.2.2.6: Discriminant Analysis
@@ -332,8 +346,6 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.knn <- perform_learning("KNN", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.4: SVM
         learn.features.svm <- perform_learning("SVM", trainset.multinomial, testset.multinomial, svm.kernel = 'laplacedot', svm.cost = 0.1)
-        learn.features.svm$var <- data.frame('feature' = features, "Overall" = learn.features.svm$var$imp[-1])
-        learn.features.svm$var <- learn.features.svm$var[order(-learn.features.svm$var$Overall), ]
         # Part 4.3.3.2.5: Logistic Regression
         learn.features.log <- perform_learning("LOG", trainset.multinomial, testset.multinomial)
         # Part 4.3.3.2.6: Discriminant Analysis

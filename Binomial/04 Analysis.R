@@ -27,7 +27,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                       )
                           )
       confMatrix.model.nb <- confusionMatrix(pred.model.nb, testset$diagnosis)
-      var.model.nb <- varImp(model.nb, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.nb <- varImp(model.nb, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.nb <- varImp(model.nb, scale = FALSE)
       return(list(model = model.nb, pred = pred.model.nb, confMatrix = confMatrix.model.nb, var = var.model.nb, roc = roc.model.nb))
     } else if (method == "KNN") {
       # Part 4.2: K Nearest Neighbors
@@ -48,7 +49,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                       )
                         )
       confMatrix.model.knn <- confusionMatrix(pred.model.knn, testset$diagnosis)
-      var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.knn <- varImp(model.knn, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.knn <- varImp(model.knn, scale = FALSE)
       return(list(model = model.knn, pred = pred.model.knn, confMatrix = confMatrix.model.knn, var = var.model.knn, roc = roc.model.knn))
     } else if (method == "DT") {
       # Part 4.3: Decision Tree
@@ -58,7 +60,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                         method = "class", 
                         control = rpart.control(minsplit=2, minbucket = 1, cp = 0.001)
       )
-      var.model.dt<- varImp(model.dt, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.dt<- varImp(model.dt, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.dt<- varImp(model.dt, scale = FALSE)
       arrange(var.model.dt, desc(Overall))
       rpart.plot(model.dt)
       pdf(export.filename)
@@ -104,7 +107,10 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         print(paste(kernel," @ ", cost))
         print(confMatrix.model.svm)
       }
-      var.model.svm <- Importance(model.svm, data = trainset)
+      var.model.svm <- Importance(model.svm, data = trainset, method = "DSA", outindex = "diagnosis")
+      var.model.svm <- data.frame("feature" = colnames(var.model.svm$data), "Overall" = var.model.svm$imp)
+      var.model.svm <- head(var.model.svm, -1)
+      var.model.svm <- var.model.svm[order(-var.model.svm$Overall),]
       if (!tune) {
         roc.model.svm <- auc(actual = testset$diagnosis, 
                               predicted = predict(model.svm, 
@@ -133,7 +139,10 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                              )
                           )
       confMatrix.model.logit <- confusionMatrix(pred.model.logit, testset$diagnosis)
-      var.model.logit <- varImp(model.logit, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      #var.model.logit <- varImp(model.logit, useModel = TRUE, nonpara = TRUE, scale = TRUE)
+      var.model.logit <- varImp(model.logit, scale = FALSE)
+      var.model.logit <- data.frame("feature" = rownames(var.model.logit), "Overall" = var.model.logit$Overall)
+      var.model.logit <- var.model.logit[order(-var.model.logit$Overall), ]
       
       #summary(model.logit)
       #View(cbind("coeff" = coef(model.logit), "odds ratio" = (exp(coef(model.logit)) - 1) * 100)) # Odds ratio
@@ -155,17 +164,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       model.lda <- lda(diagnosis ~ ., 
                        data = trainset,
       )
-      pred.model.lda <- predict(model.lda, newdata = testset)
-      print(predict(model.lda, 
-                                                newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                type = "raw"
-                            )$posterior[,2])
-      roc.model.lda <- auc(actual = testset$diagnosis, 
-                            predicted = predict(model.lda, 
-                                                newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                type = "raw"
-                            )$posterior[,2]
-                        )
+      pred.model.lda <- predict(model.lda, newdata = testset, type = "response")
+      roc.model.lda <- auc(testset$diagnosis, pred.model.lda$class)
       confMatrix.model.lda <- confusionMatrix(pred.model.lda$class, testset$diagnosis)
       #return(list(model = model.lda, pred = pred.model.lda, confMatrix = confMatrix.model.lda, var = var.model.lda))
       return(list(model = model.lda, pred = pred.model.lda, confMatrix = confMatrix.model.lda, var = var.model.lda, roc = roc.model.lda))
@@ -241,7 +241,10 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       )
       pred.model.auto <- predict(model.auto, testset)
       roc.model.auto <- round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"), 2)
-      var.model.auto <- Importance(model.auto, data = trainset, method = "DSA")
+      var.model.auto <- Importance(model.auto, data = trainset, method = "DSA", outindex = "diagnosis")
+      var.model.auto <- data.frame("feature" = colnames(var.model.auto$data), "Overall" = var.model.auto$imp)
+      var.model.auto <- head(var.model.auto, -1)
+      var.model.auto <- var.model.auto[order(-var.model.auto$Overall),]
       # show leaderboard:
       cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
@@ -270,8 +273,6 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.gf.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.4: SVM 
         learn.gf.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'splinedot', svm.cost = 100)
-        learn.gf.svm$var <- data.frame('feature' = features.gf, "Overall" = learn.gf.svm$var$imp[-1])
-        learn.gf.svm$var <- learn.gf.svm$var[order(-learn.gf.svm$var$Overall), ]
         # Part 4.3.1.2.5: Logistic Regression
         learn.gf.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
         # Part 4.3.1.2.6: Discriminant Analysis
@@ -298,8 +299,6 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
           learn.pca.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
           # Part 4.3.2.2.4: SVM (For PCA, SVM tuning had no significant features)
           learn.pca.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'splinedot', svm.cost = 100)
-          learn.pca.svm$var <- data.frame('feature' = features.pca, "Overall" = learn.pca.svm$var$imp[-1])
-          learn.pca.svm$var <- learn.pca.svm$var[order(-learn.pca.svm$var$Overall), ]
           # Part 4.3.2.2.5: Logistic Regression
           learn.pca.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
           # Part 4.3.2.2.6: Discriminant Analysis
@@ -326,8 +325,6 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
         # Part 4.3.3.2.4: SVM
         learn.features.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'splinedot', svm.cost = 100)
-        learn.features.svm$var <- data.frame('feature' = features, "Overall" = learn.features.svm$var$imp[-1])
-        learn.features.svm$var <- learn.features.svm$var[order(-learn.features.svm$var$Overall), ]
         # Part 4.3.3.2.5: Logistic Regression
         learn.features.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
         # Part 4.3.3.2.6: Discriminant Analysis
