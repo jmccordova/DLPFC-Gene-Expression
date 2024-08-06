@@ -175,7 +175,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       levels(trainset$diagnosis)[match("9",levels(trainset$diagnosis))] <- "CTL"
       model.lda <- train(diagnosis ~ ., 
                          data = trainset, 
-                         method = "lda",
+                         method = "mda",
                          trControl = trControl.lda)
       levels(testset$diagnosis)[match("1",levels(testset$diagnosis))] <- "BPD"
       levels(testset$diagnosis)[match("2",levels(testset$diagnosis))] <- "MDD"
@@ -271,7 +271,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
       cat("Best model:", model.auto@model, "\n")
       cat("AUC", "=", round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"),2), "\n")
-      return(list(model = model.auto, pred = pred.model.auto, confMatrix = c(), var = var.model.auto, roc = roc.model.auto))
+      return(list(model = model.auto, pred = pred.model.auto, confMatrix = rminer::mmetric(testset$diagnosis, pred.model.auto, "ALL"), var = var.model.auto, roc = roc.model.auto))
     }
   }
   
@@ -354,4 +354,15 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
         # Part 4.3.3.2.8: Random Forest  
         learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 1501, rf.mtry = 10)
+        
+        
+        levels(trainset.multinomial$diagnosis)[match("1",levels(trainset.multinomial$diagnosis))] <- "BPD"
+        levels(trainset.multinomial$diagnosis)[match("2",levels(trainset.multinomial$diagnosis))] <- "MDD"
+        levels(trainset.multinomial$diagnosis)[match("3",levels(trainset.multinomial$diagnosis))] <- "SCZ"
+        levels(trainset.multinomial$diagnosis)[match("9",levels(trainset.multinomial$diagnosis))] <- "CTL"
+        fit <- vglm(diagnosis ~ ., family = multinomial(refLevel="CTL"), data = trainset.multinomial) # vglm = vector GLM
+        coef(fit, matrix = TRUE)
+        exp(coef(fit))
+        
+        write.csv(coef(learn.features.da$model), paste(exportdir, exportsubdir, "DA (GF + PCA).csv", sep = "/"), row.names = TRUE)
         

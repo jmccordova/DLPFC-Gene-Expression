@@ -250,7 +250,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
       cat("Best model:", model.auto@model, "\n")
       cat("AUC", "=", roc.model.auto, "\n")
-      return(list(model = model.auto, pred = pred.model.auto, confMatrix = c(), var = var.model.auto, roc = roc.model.auto))
+      
+      return(list(model = model.auto, pred = pred.model.auto, confMatrix = rminer::mmetric(testset$diagnosis, pred.model.auto, "ALL"), var = var.model.auto, roc = roc.model.auto))
     }
   }
 

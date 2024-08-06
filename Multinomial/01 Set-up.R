@@ -34,7 +34,7 @@ BiocManager::install(
     "caret", "e1071", "lattice",  "naivebayes",
     "class", "gmodels", 
     "rpart", "rpart.plot", "Hmisc", 
-    "nnet", "rminer",
+    "nnet", "rminer", "VGAM",
     "randomForest",
     "MASS", "Metrics"), 
   force = TRUE, 
@@ -67,7 +67,7 @@ library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc
 library(class, lib.loc = package_loc); library(gmodels, lib.loc = package_loc)
 library(parallel, lib.loc = package_loc); library(doParallel, lib.loc = package_loc)
 library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc)
-library(nnet, lib.loc = package_loc); library(rminer, lib.loc = package_loc)
+library(nnet, lib.loc = package_loc); library(rminer, lib.loc = package_loc); library(VGAM, lib.loc = package_loc)
 library(randomForest, lib.loc = package_loc)
 library(MASS, lib.loc = package_loc); library(Metrics, lib.loc = package_loc); 
 library(caret, lib.loc = package_loc); 
