@@ -36,7 +36,11 @@ BiocManager::install(
     "rpart", "rpart.plot", "Hmisc", 
     "nnet", "rminer", "VGAM",
     "randomForest",
-    "MASS", "Metrics"), 
+    "MASS", "Metrics",
+    
+    # Part 5: Ranking
+    "DescTools", "lmtest"
+  ), 
   force = TRUE, 
   dependencies = TRUE, 
   lib = package_loc
@@ -71,6 +75,9 @@ library(nnet, lib.loc = package_loc); library(rminer, lib.loc = package_loc); li
 library(randomForest, lib.loc = package_loc)
 library(MASS, lib.loc = package_loc); library(Metrics, lib.loc = package_loc); 
 library(caret, lib.loc = package_loc); 
+
+# Part 5: Ranking
+library(DescTools, lib.loc = package_loc); library(lmtest, lib.loc = package_loc);
 
 # Part 1.3: Initialize cores for parallel processing
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS

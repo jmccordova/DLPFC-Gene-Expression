@@ -354,15 +354,3 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
         # Part 4.3.3.2.8: Random Forest  
         learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 1501, rf.mtry = 10)
-        
-        
-        levels(trainset.multinomial$diagnosis)[match("1",levels(trainset.multinomial$diagnosis))] <- "BPD"
-        levels(trainset.multinomial$diagnosis)[match("2",levels(trainset.multinomial$diagnosis))] <- "MDD"
-        levels(trainset.multinomial$diagnosis)[match("3",levels(trainset.multinomial$diagnosis))] <- "SCZ"
-        levels(trainset.multinomial$diagnosis)[match("9",levels(trainset.multinomial$diagnosis))] <- "CTL"
-        fit <- vglm(diagnosis ~ ., family = multinomial(refLevel="CTL"), data = trainset.multinomial) # vglm = vector GLM
-        coef(fit, matrix = TRUE)
-        exp(coef(fit))
-        
-        write.csv(coef(learn.features.da$model), paste(exportdir, exportsubdir, "DA (GF + PCA).csv", sep = "/"), row.names = TRUE)
-        
