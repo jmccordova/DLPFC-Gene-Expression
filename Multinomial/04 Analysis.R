@@ -1,8 +1,6 @@
 # Part 4: Machine Learning
 exportsubdir <- "Step 4 - Analysis"
 dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
-  # Part 4.1: Compute the alpha using Bonferroni
-  alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
   # Part 4.2: Create a function for each ML
   perform_learning <- function(method, trainset, testset, 
                                svm.kernel = NULL, 
@@ -240,6 +238,27 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       if (!tune) {
         return(list(model = model.rf, pred = pred.model.rf, confMatrix = confMatrix.model.rf, var = var.model.rf, roc = roc.model.rf))
       }
+    } else if (method == "SOFT") {
+      colnames(trainset) <- paste0('feature_', colnames(trainset))
+      colnames(trainset)[length(colnames(trainset))] <- "diagnosis"
+      
+      colnames(testset) <- paste0('feature_', colnames(testset))
+      colnames(testset)[length(colnames(testset))] <- "diagnosis"
+      
+      set.seed(150)
+      model.soft <- SuperLearner(X = trainset[, colnames(trainset) != "diagnosis"],
+                                 Y = as.numeric(trainset$diagnosis), 
+                                 family = gaussian(),
+                                 SL.library = c("SL.mean", "SL.glmnet", "SL.glm", "SL.rpart", "SL.svm", "SL.nnet", "SL.xgboost"))
+      pred.model.soft <- predict.SuperLearner(model.soft, 
+                                              testset[, colnames(testset) != "diagnosis"], 
+                                              )
+      roc.model.soft <- multiclass.roc(response = testset$diagnosis, 
+                                       predictor = as.numeric(pred.model.soft$pred),
+                                       percent = TRUE)
+      var.model.soft <- Importance(model.soft, data = trainset, method = "DSA", outindex = "diagnosis")
+      
+      return(list(model = model.soft, pred = pred.model.soft, confMatrix = rminer::mmetric(testset$diagnosis, pred.model.soft$pred, "ALL"), var = var.model.soft, roc = roc.model.soft))
     } else {
       model.auto <- rminer::fit(diagnosis ~ ., 
                                 data = trainset, 
@@ -270,7 +289,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
       cat("Best model:", model.auto@model, "\n")
-      cat("AUC", "=", round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"),2), "\n")
+      cat("AUC", "=", round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"), 2), "\n")
       return(list(model = model.auto, pred = pred.model.auto, confMatrix = rminer::mmetric(testset$diagnosis, pred.model.auto, "ALL"), var = var.model.auto, roc = roc.model.auto))
     }
   }
@@ -278,13 +297,17 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
   # Part 4.3: Perform ML
     # Part 4.3.1: Gene Filtering Dataset
     data.multinomial <- createDataset(dataSource = data.pp, feature = features.gf, probeset = huex.probes, filename = "Gene Filtering")
+    # Part 4.1: Compute the alpha using Bonferroni
+    alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
     sets <- buildTrainTest(data.multinomial)
     trainset.multinomial <- sets$trainset
     testset.multinomial <- sets$testset
+    sets <- buildTrainTest(data.multinomial)
+    validationset.multinomial <- sets$validationset
     remove(sets)
       # Part 4.3.1.1: Perform tuning for SVM and Random Forest
-      perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
-      perform_learning("RF", trainset.multinomial, testset.multinomial, tune = TRUE)
+      perform_learning("SVM", trainset.multinomial, validationset.multinomial, tune = TRUE)
+      perform_learning("RF", trainset.multinomial, validationset.multinomial, tune = TRUE)
       # Part 4.3.1.2: Perform analysis
         # Part 4.3.1.2.1: Do ensemble of all learning methods
         learn.gf.auto <- perform_learning("auto", trainset.multinomial, testset.multinomial)
@@ -304,13 +327,17 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.gf.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
     # Part 4.3.2: PCA Dataset
     data.multinomial <- createDataset(dataSource = data.pp, feature = features.pca, probeset = huex.probes, filename = "PCA")
+    # Part 4.1: Compute the alpha using Bonferroni
+    alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
     sets <- buildTrainTest(data.multinomial)
     trainset.multinomial <- sets$trainset
     testset.multinomial <- sets$testset
+    sets <- buildTrainTest(data.multinomial)
+    validationset.multinomial <- sets$validationset
     remove(sets)
       # Part 4.3.2.1: Perform tuning for SVM and Random Forest
-      perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
-      perform_learning("RF", trainset.multinomial, testset.multinomial, tune = TRUE)
+      perform_learning("SVM", trainset.multinomial, validationset.multinomial, tune = TRUE)
+      perform_learning("RF", trainset.multinomial, validationset.multinomial, tune = TRUE)
       # Part 4.3.2.2: Perform analysis
         # Part 4.3.2.2.1: Do ensemble of all learning methods
         learn.pca.auto <- perform_learning("auto", trainset.multinomial, testset.multinomial)
@@ -330,13 +357,17 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.pca.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 501, rf.mtry = 6)
     # Part 4.3.3: Combined Dataset
     data.multinomial <- createDataset(dataSource = data.pp, feature = features, probeset = huex.probes, filename = "PCA + GF")
+    # Part 4.1: Compute the alpha using Bonferroni
+    alpha <- get_alpha(alpha, nrow(data.multinomial) - 1)
     sets <- buildTrainTest(data.multinomial)
     trainset.multinomial <- sets$trainset
     testset.multinomial <- sets$testset
+    sets <- buildTrainTest(data.multinomial)
+    validationset.multinomial <- sets$validationset
     remove(sets)
       # Part 4.3.3.1: Perform tuning for SVM and Random Forest
-      perform_learning("SVM", trainset.multinomial, testset.multinomial, tune = TRUE)
-      perform_learning("RF", trainset.multinomial, testset.multinomial, tune = TRUE)
+      perform_learning("SVM", trainset.multinomial, validationset.multinomial, tune = TRUE)
+      perform_learning("RF", trainset.multinomial, validationset.multinomial, tune = TRUE)
       # Part 4.3.3.2: Perform analysis
         # Part 4.3.3.2.1: Do ensemble of all learning methods
         learn.features.auto <- perform_learning("auto", trainset.multinomial, testset.multinomial)
@@ -354,3 +385,11 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
         # Part 4.3.3.2.8: Random Forest  
         learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 1501, rf.mtry = 10)
+        
+        perform_learning("SOFT", trainset.multinomial, testset.multinomial)
+        
+        set.seed(150)
+        model.soft <- SuperLearner(X = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"],
+                                   Y = as.numeric(trainset.multinomial$diagnosis), 
+                                   SL.library = c("SL.caret.rpart", "SL.glm", "SL.glmnet", "SL.rpart", "SL.svm", "SL.knn", "SL.nnet", "SL.randomForest", "SL.nnls", "SL.xgboost"))
+        

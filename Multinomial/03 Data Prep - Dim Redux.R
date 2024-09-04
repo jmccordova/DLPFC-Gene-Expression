@@ -175,6 +175,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
     saveHTML(atab, file=paste(exportdir, exportsubdir, "PCA Probe Names.html", sep = "/"))
     # Part 3.2.14: Create a correlation matrix across each features
     features.pca.corr <- rcorr(as.matrix(t(exprs(data.pp)[features.pca, ])))
+    # Get MSA
+    KMO(cor(x = as.matrix(t(exprs(data.pp)[features.pca, ]))))
     corrplot(features.pca.corr$r)
       
     # Step 3.2.15: create Venn diagram and display all sets 
@@ -270,6 +272,22 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       
       return(list(trainset = trainset,
                   testset = testset))
+    }
+    
+    buildTrainValidation <- function(dataSource) {
+      options(scipen=999)  # prevents printing scientific notations.
+      set.seed(100)
+      # Part 3.5.1: Choose the index on which to choose as training
+      index <- createDataPartition(dataSource$diagnosis, p = 0.75, list = F)
+      # Part 3.5.2: To make the training better, perform upsampling
+      trainset <- dataSource[index, ]
+      trainset <- upSample(trainset[, names(trainset) != "diagnosis"], trainset$diagnosis, yname = "diagnosis")
+      # Part 3.5.3: Correct the factors in testing
+      validationset <- dataSource[-index, ]
+      validationset$diagnosis <- factor(validationset$diagnosis, ordered = FALSE)
+      
+      return(list(trainset = trainset,
+                  validationset = validationset))
     }
     
     remove(e, data)

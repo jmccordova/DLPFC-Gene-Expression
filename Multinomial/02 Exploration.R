@@ -124,3 +124,4 @@ exportsubdir <- "Part 2 - Exploration"
   
   # Remove rawData variable to save space
   rm(rawData, celFiles, data1)
+  

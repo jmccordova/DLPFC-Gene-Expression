@@ -1,9 +1,11 @@
 # Part 1: Setting up
 exportsubdir <- "Part 1 - Setup"
 # Part 1.1: Sets the location of the data to be used and where the packages should be put
-datadir <- "E:/jmcco/Downloads/BNF 300.2 Data/GSE208338_RAW/"
+userdir <- "C:/Users/jmcco/"
+#userdir <- "E:/jmcco/"
+datadir <- paste(userdir, "Downloads/BNF 300.2 Data/GSE208338_RAW/", sep = "")
 #probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/Affymetrix_HuEx/"
-probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/HuEx-1_0-st-v2-na36-hg19 Probeset/"
+probedir <- paste(userdir, "Downloads/BNF 300.2 Data/HuEx-1_0-st-v2-na36-hg19 Probeset/", sep = "")
 setwd(datadir)
 exportdir <- paste(dirname(rstudioapi::getSourceEditorContext()$path), "/Export", sep = "")
 package_loc <- paste(datadir, "lib", sep = "")
@@ -36,7 +38,7 @@ BiocManager::install(
     "rpart", "rpart.plot", "Hmisc", 
     "nnet", "rminer", "VGAM",
     "randomForest",
-    "MASS", "Metrics",
+    "MASS", "Metrics", "SuperLearner", "ROCR",
     
     # Part 5: Ranking
     "DescTools", "lmtest"
@@ -60,7 +62,7 @@ library(multtest, lib = package_loc);  library(pkgconfig, lib = package_loc);  l
 # Part 3: Dimension Reduction
 library(locfit, lib.loc = package_loc)
 library(corrr, lib.loc = package_loc); library(idm, lib.loc = package_loc); library(irlba, lib.loc = package_loc) 
-library(PCAtools, lib.loc = package_loc); library(RMTstat, lib.loc = package_loc); library(rappdirs, lib.loc = package_loc); library(biomaRt, lib.loc = package_loc); library(cowplot, lib.loc = package_loc); library(ggplotify, lib.loc = package_loc)
+library(PCAtools, lib.loc = package_loc); library(psych, lib.loc = package_loc); library(RMTstat, lib.loc = package_loc); library(rappdirs, lib.loc = package_loc); library(biomaRt, lib.loc = package_loc); library(cowplot, lib.loc = package_loc); library(ggplotify, lib.loc = package_loc)
 library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); 
 library(EFA.dimensions, lib.loc = package_loc)
 library(corrplot, lib.loc = package_loc); library(factoextra, lib.loc = package_loc); library(car, lib.loc = package_loc)
@@ -74,7 +76,7 @@ library(rpart, lib.loc = package_loc); library(rpart.plot, lib.loc = package_loc
 library(nnet, lib.loc = package_loc); library(rminer, lib.loc = package_loc); library(VGAM, lib.loc = package_loc)
 library(randomForest, lib.loc = package_loc)
 library(MASS, lib.loc = package_loc); library(Metrics, lib.loc = package_loc); 
-library(caret, lib.loc = package_loc); 
+library(caret, lib.loc = package_loc); library(SuperLearner, lib.loc = package_loc); library(ROCR, lib.loc = package_loc); 
 
 # Part 5: Ranking
 library(DescTools, lib.loc = package_loc); library(lmtest, lib.loc = package_loc);
@@ -138,3 +140,4 @@ show_perfect_collinearity <- function(df) {
   print(multi.which(df == 1))
   remove(df)
 }
+
