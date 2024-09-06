@@ -31,6 +31,7 @@ exportsubdir <- "Part 2 - Exploration"
     colnames.e[i] <- strsplit(colnames.e[i], split = "_")[[1]][1]
   }
   colnames(e) <- colnames.e
+  remove(colnames.e)
   data <- as.data.frame(exprs(e))
   
   # Part 2.8: View data as box and whiskers

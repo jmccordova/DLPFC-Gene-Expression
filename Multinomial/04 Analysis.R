@@ -238,35 +238,20 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       if (!tune) {
         return(list(model = model.rf, pred = pred.model.rf, confMatrix = confMatrix.model.rf, var = var.model.rf, roc = roc.model.rf))
       }
-    } else if (method == "SOFT") {
-      colnames(trainset) <- paste0('feature_', colnames(trainset))
-      colnames(trainset)[length(colnames(trainset))] <- "diagnosis"
-      
-      colnames(testset) <- paste0('feature_', colnames(testset))
-      colnames(testset)[length(colnames(testset))] <- "diagnosis"
-      
-      set.seed(150)
-      model.soft <- SuperLearner(X = trainset[, colnames(trainset) != "diagnosis"],
-                                 Y = as.numeric(trainset$diagnosis), 
-                                 family = gaussian(),
-                                 SL.library = c("SL.mean", "SL.glmnet", "SL.glm", "SL.rpart", "SL.svm", "SL.nnet", "SL.xgboost"))
-      pred.model.soft <- predict.SuperLearner(model.soft, 
-                                              testset[, colnames(testset) != "diagnosis"], 
-                                              )
-      roc.model.soft <- multiclass.roc(response = testset$diagnosis, 
-                                       predictor = as.numeric(pred.model.soft$pred),
-                                       percent = TRUE)
-      var.model.soft <- Importance(model.soft, data = trainset, method = "DSA", outindex = "diagnosis")
-      
-      return(list(model = model.soft, pred = pred.model.soft, confMatrix = rminer::mmetric(testset$diagnosis, pred.model.soft$pred, "ALL"), var = var.model.soft, roc = roc.model.soft))
     } else {
+      models <- c("naive","ctree","cv.glmnet","rpart","kknn","ksvm","lssvm","mlp","mlpe", "randomForest","lda","multinom", "naiveBayes","xgboost", "SE")
+      if (method == "SOFT") {
+        models <- c(models, "SE")
+      }
       model.auto <- rminer::fit(diagnosis ~ ., 
                                 data = trainset, 
                                 model = "auto",
                                 fdebug = TRUE,
+                                feature = "sabs",
+                                scale = "inputs",
                                 search = list(
                                   search = mparheuristic( 
-                                    model = c("naive","ctree","cv.glmnet","rpart","kknn","ksvm","lssvm","mlp","mlpe", "randomForest","lda","multinom", "naiveBayes","xgboost"),
+                                    model = models,
                                     task = "class", 
                                     inputs = ncol(trainset)-1
                                   ),
@@ -275,21 +260,32 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                   convex = 0
                                 )
       )
+      
       pred.model.auto <- predict(model.auto, testset)
-      roc.model.auto <- multiclass.roc(response = testset$diagnosis, 
-                                      predictor = predict(model.auto, 
-                                                          newdata = testset[, colnames(testset) != "diagnosis"], 
-                                                          type = "prob"),
-                                      percent = TRUE)
-      var.model.auto <- Importance(model.auto, data = trainset, method = "DSA", outindex = "diagnosis")
-      var.model.auto <- data.frame("feature" = colnames(var.model.auto$data), "Overall" = var.model.auto$imp)
-      var.model.auto <- head(var.model.auto, -1)
-      var.model.auto <- var.model.auto[order(-var.model.auto$Overall),]
+      #roc.model.auto <- multiclass.roc(response = testset$diagnosis, 
+      #                                predictor = predict(model.auto, 
+      #                                                    newdata = testset[, colnames(testset) != "diagnosis"], 
+      #                                                    type = "prob"),
+      #                                percent = TRUE)
+      roc.model.auto <- round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"), 2)
+      importanceMethod <- "sens"
+      if (model.auto@model == "randomForest") {
+        importanceMethod <- "randomForest"
+      }
+      
+      var.model.auto <- Importance(M = model.auto, 
+                                   #method = importanceMethod,
+                                   #outindex = "diagnosis",
+                                   data = trainset
+                          )
+      #var.model.auto <- data.frame("feature" = colnames(var.model.auto$data), "Overall" = var.model.auto$imp)
+      #var.model.auto <- head(var.model.auto, -1)
+      #var.model.auto <- var.model.auto[order(-var.model.auto$Overall),]
       # show leaderboard:
       cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
       cat("Best model:", model.auto@model, "\n")
-      cat("AUC", "=", round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"), 2), "\n")
+      cat("AUC", "=", roc.model.auto, "\n")
       return(list(model = model.auto, pred = pred.model.auto, confMatrix = rminer::mmetric(testset$diagnosis, pred.model.auto, "ALL"), var = var.model.auto, roc = roc.model.auto))
     }
   }
@@ -386,10 +382,5 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.3.2.8: Random Forest  
         learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 1501, rf.mtry = 10)
         
-        perform_learning("SOFT", trainset.multinomial, testset.multinomial)
-        
-        set.seed(150)
-        model.soft <- SuperLearner(X = trainset.multinomial[, colnames(trainset.multinomial) != "diagnosis"],
-                                   Y = as.numeric(trainset.multinomial$diagnosis), 
-                                   SL.library = c("SL.caret.rpart", "SL.glm", "SL.glmnet", "SL.rpart", "SL.svm", "SL.knn", "SL.nnet", "SL.randomForest", "SL.nnls", "SL.xgboost"))
+        learn.features.soft <- perform_learning("SOFT", trainset.multinomial, testset.multinomial)
         

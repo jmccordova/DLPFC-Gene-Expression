@@ -71,7 +71,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
     # Step 3.2.1: Check for null values (If it returned more than 0, there is a null value)
     print(colSums(is.na(exprs(data.pp)))[colSums(is.na(exprs(data.pp))) != 0])
     # Step 3.2.3: Perform PCA
-    model.pca <- pca(exprs(data.pp), removeVar = 0.1)
+    model.pca <- PCAtools::pca(exprs(data.pp), removeVar = 0.1)
     # Step 3.2.4: Determine optimum number of PCs 
       # Step 3.2.4.1: Horn's method
       pca.loadings.horn <- parallelPCA(exprs(data.pp))
@@ -254,6 +254,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         write.csv(data, paste(exportdir, exportsubdir, paste(filename, "Chosen Dataset.csv", sep = ""), sep = "/"), row.names = TRUE)
         write.csv(huex.probes, paste(exportdir, exportsubdir, paste(filename, "Chosen Dataset.csv", sep = ""), sep = "/"), row.names = TRUE)
       
+      colnames(data) <- c(paste('feature_', colnames(data)[1:ncol(data)-1], sep = ''), 'diagnosis')
       return(data)
     }
     

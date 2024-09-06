@@ -1,14 +1,5 @@
 # Part 1: Setting up
 exportsubdir <- "Part 1 - Setup"
-# Part 1.1: Sets the location of the data to be used and where the packages should be put
-userdir <- "C:/Users/jmcco/"
-#userdir <- "E:/jmcco/"
-datadir <- paste(userdir, "Downloads/BNF 300.2 Data/GSE208338_RAW/", sep = "")
-#probedir <- "E:/jmcco/Downloads/BNF 300.2 Data/Affymetrix_HuEx/"
-probedir <- paste(userdir, "Downloads/BNF 300.2 Data/HuEx-1_0-st-v2-na36-hg19 Probeset/", sep = "")
-setwd(datadir)
-exportdir <- paste(dirname(rstudioapi::getSourceEditorContext()$path), "/Export", sep = "")
-package_loc <- paste(datadir, "lib", sep = "")
 
 # Part 1.2: Package and library installations
 # Bioconductor Installation
@@ -30,7 +21,7 @@ BiocManager::install(
     "RMTstat", "biomaRt", "pROC", "nFactors",
     "EFA.dimensions", 
     "corrplot", "factoextra", "car", 
-    "jsonlite",
+    "jsonlite", "glmnet",
     
     # Part 4: Analysis
     "caret", "e1071", "lattice",  "naivebayes",
@@ -66,7 +57,7 @@ library(PCAtools, lib.loc = package_loc); library(psych, lib.loc = package_loc);
 library(pROC, lib.loc = package_loc); library(withr, lib.loc = package_loc); 
 library(EFA.dimensions, lib.loc = package_loc)
 library(corrplot, lib.loc = package_loc); library(factoextra, lib.loc = package_loc); library(car, lib.loc = package_loc)
-library(jsonlite, lib.loc = package_loc); library(backports, lib.loc = package_loc); library(Hmisc, lib.loc = package_loc); 
+library(jsonlite, lib.loc = package_loc); library(backports, lib.loc = package_loc); library(Hmisc, lib.loc = package_loc); library(glmnet, lib.loc = package_loc); 
 
 # Part 4: Analysis
 library(e1071, lib.loc = package_loc); library(naivebayes, lib.loc = package_loc)
