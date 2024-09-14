@@ -224,13 +224,20 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         return(list(model = model.rf, pred = pred.model.rf, confMatrix = confMatrix.model.rf, var = var.model.rf, roc = roc.model.rf))
       }
     } else {
+      models <- c("naive","ctree","cv.glmnet","rpart","kknn","ksvm","lssvm","mlp","mlpe", "randomForest","lda","multinom", "naiveBayes","xgboost", "SE")
+      if (method == "SOFT") {
+        models <- c(models, "SE")
+      }
+      
       model.auto <- rminer::fit(diagnosis ~ ., 
                                 data = trainset, 
                                 model = "auto",
                                 fdebug = TRUE,
+                                feature = "sabs",
+                                scale = "inputs",
                                 search = list(
                                   search = mparheuristic( 
-                                    model = c("naive","ctree","cv.glmnet","rpart","kknn","ksvm","lssvm","mlp","mlpe", "randomForest","lda","multinom", "naiveBayes","xgboost"),
+                                    model = models,
                                     task = "class", 
                                     inputs = ncol(trainset)-1
                                   ),
@@ -239,12 +246,28 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
                                   convex = 0
                                 )
       )
+      
       pred.model.auto <- predict(model.auto, testset)
       roc.model.auto <- round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"), 2)
-      var.model.auto <- Importance(model.auto, data = trainset, method = "DSA", outindex = "diagnosis")
-      var.model.auto <- data.frame("feature" = colnames(var.model.auto$data), "Overall" = var.model.auto$imp)
+      importanceMethod <- "sens"
+      if (model.auto@model == "randomForest") {
+        importanceMethod <- "randomForest"
+      }
+      
+      var.model.auto <- Importance(M = model.auto, 
+                                   #method = importanceMethod,
+                                   #outindex = "diagnosis",
+                                   data = trainset
+      )
+      # Create dataframe that combines feature names and the variable importance
+      var.model.auto <- data.frame("feature" = colnames(trainset), "Overall" = var.model.auto$imp)
+      # Remove diagnosis row
       var.model.auto <- head(var.model.auto, -1)
+      # Remove 0 importance
+      var.model.auto <- subset(var.model.auto, Overall != 0)
+      # Reorder from highest importance to least
       var.model.auto <- var.model.auto[order(-var.model.auto$Overall),]
+      
       # show leaderboard:
       cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
@@ -313,6 +336,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
     sets <- buildTrainTest(data.binomial)
     trainset.binomial <- sets$trainset
     testset.binomial <- sets$testset
+    sets <- buildTrainTest(data.multinomial)
+    validationset.multinomial <- sets$validationset
     remove(sets)
       # Part 4.3.3.1: Perform tuning for SVM and Random Forest
       perform_learning("SVM", trainset.binomial, testset.binomial, tune = TRUE)
@@ -334,4 +359,6 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.dt <- perform_learning("DT", trainset.binomial, testset.binomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
         # Part 4.3.3.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
         learn.features.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 3201, rf.mtry = 13)
+        # Part 4.3.3.2.9: Soft voting from all the models
+        learn.features.soft <- perform_learning("SOFT", trainset.binomial, testset.binomial)
         

@@ -73,3 +73,11 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
   # Step 5.3: Get data from annotation
   write.csv(huex.probes[, which(huex.probes$probeset_id %in% features)], paste(exportdir, exportsubdir, "Annotated Features.csv", sep = "/"), row.names = TRUE)
   
+  matrix <- c(features,
+              c(sub("feature_", "", learn.features.auto$var$feature), rep("", length(features) - nrow(learn.features.auto$var))),
+              c(sub("feature_", "", learn.features.soft$var$feature), rep("", length(features) - nrow(learn.features.soft$var)))
+  )
+  matrix <- as.data.frame(matrix(matrix, ncol = 3))
+  colnames(matrix) <- c("Features", "Auto", "Soft")
+  write.csv(matrix, paste(exportdir, exportsubdir, "Rminer features.csv", sep = "/"), row.names = TRUE)
+  

@@ -250,6 +250,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
     write.csv(data, paste(exportdir, exportsubdir, paste(filename, "Chosen Dataset.csv", sep = ""), sep = "/"), row.names = TRUE)
     write.csv(huex.probes, paste(exportdir, exportsubdir, paste(filename, "Chosen Dataset.csv", sep = ""), sep = "/"), row.names = TRUE)
     
+    colnames(data) <- c(paste('feature_', colnames(data)[1:ncol(data)-1], sep = ''), 'diagnosis')
     return(data)
   }
   
@@ -268,6 +269,22 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
     
     return(list(trainset = trainset,
                 testset = testset))
+  }
+  
+  buildTrainValidation <- function(dataSource) {
+    options(scipen=999)  # prevents printing scientific notations.
+    set.seed(100)
+    # Part 3.5.1: Choose the index on which to choose as training
+    index <- createDataPartition(dataSource$diagnosis, p = 0.75, list = F)
+    # Part 3.5.2: To make the training better, perform upsampling
+    trainset <- dataSource[index, ]
+    trainset <- upSample(trainset[, names(trainset) != "diagnosis"], trainset$diagnosis, yname = "diagnosis")
+    # Part 3.5.3: Correct the factors in testing
+    validationset <- dataSource[-index, ]
+    validationset$diagnosis <- factor(validationset$diagnosis, ordered = FALSE)
+    
+    return(list(trainset = trainset,
+                validationset = validationset))
   }
   
   remove(e, data)
