@@ -207,6 +207,18 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       
       for(ntree in ntrees) {
         for(mtry in mtries) {
+          # Used to show each feature importance per class
+          model.rf <- randomForest(x = trainset[, colnames(trainset) != "diagnosis"],
+                                   y = trainset$diagnosis, 
+                                   ntree = ntree, 
+                                   mtry = mtry,
+                                   importance = TRUE
+          )
+          
+          # Used to show each feature importance per class
+          var.model.rf <- varImp(model.rf, useModel = TRUE, nonpara = TRUE, scale = TRUE, conditional = TRUE)
+          write.csv(var.model.rf, paste(exportdir, exportsubdir, "Variable Importance (RF).csv", sep = "/"), row.names = TRUE)
+          
           model.rf <- randomForest(x = trainset[, colnames(trainset) != "diagnosis"],
                                    y = trainset$diagnosis, 
                                    ntree = ntree, 
@@ -229,8 +241,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
             print(confMatrix.model.rf$overall['AccuracyPValue'])
             print(roc.model.rf$auc)
           }
-          #var.model.rf <- varImp(model.rf, useModel = TRUE, nonpara = TRUE, scale = TRUE)
-          var.model.rf <- varImp(model.rf, scale = FALSE)
+          var.model.rf <- varImp(model.rf, scale = TRUE)
           var.model.rf <- arrange(var.model.rf, desc(Overall))
         }
       }
@@ -243,49 +254,51 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
       if (method == "SOFT") {
         models <- c(models, "SE")
       }
+      
+      metric <- "AUC"
+      hyperparameters <- mparheuristic( 
+        model = models,
+        task = "class", 
+        inputs = ncol(trainset)-1
+      )
+      
+      tuner <- list(
+        search = hyperparameters,
+        smethod = "auto",
+        metric = metric,
+        convex = 0
+      )
+      
       model.auto <- rminer::fit(diagnosis ~ ., 
                                 data = trainset, 
                                 model = "auto",
                                 fdebug = TRUE,
                                 feature = "sabs",
                                 scale = "inputs",
-                                search = list(
-                                  search = mparheuristic( 
-                                    model = models,
-                                    task = "class", 
-                                    inputs = ncol(trainset)-1
-                                  ),
-                                  smethod = "auto",
-                                  metric = "AUC",
-                                  convex = 0
-                                )
+                                search = tuner
       )
       
       pred.model.auto <- predict(model.auto, testset)
-      #roc.model.auto <- multiclass.roc(response = testset$diagnosis, 
-      #                                predictor = predict(model.auto, 
-      #                                                    newdata = testset[, colnames(testset) != "diagnosis"], 
-      #                                                    type = "prob"),
-      #                                percent = TRUE)
-      roc.model.auto <- round(mmetric(testset$diagnosis, pred.model.auto, metric="AUC"), 2)
-      importanceMethod <- "sens"
-      if (model.auto@model == "randomForest") {
-        importanceMethod <- "randomForest"
-      }
-      
+      roc.model.auto <- round(mmetric(testset$diagnosis, pred.model.auto, metric = metric), 4)
       var.model.auto <- Importance(M = model.auto, 
-                                   #method = importanceMethod,
-                                   #outindex = "diagnosis",
                                    data = trainset
                           )
-      #var.model.auto <- data.frame("feature" = colnames(var.model.auto$data), "Overall" = var.model.auto$imp)
-      #var.model.auto <- head(var.model.auto, -1)
-      #var.model.auto <- var.model.auto[order(-var.model.auto$Overall),]
+      print(var.model.auto)
+      # Create dataframe that combines feature names and the variable importance
+      var.model.auto <- data.frame("feature" = colnames(trainset), "Overall" = var.model.auto$imp)
+      # Remove diagnosis row
+      var.model.auto <- head(var.model.auto, -1)
+      # Remove 0 importance
+      var.model.auto <- subset(var.model.auto, Overall != 0)
+      # Reorder from highest importance to least
+      var.model.auto <- var.model.auto[order(-var.model.auto$Overall),]
+      
       # show leaderboard:
       cat("Models  by rank:", model.auto@mpar$LB$model, "\n")
       cat("Validation values:", round(model.auto@mpar$LB$eval,4), "\n")
       cat("Best model:", model.auto@model, "\n")
       cat("AUC", "=", roc.model.auto, "\n")
+      
       return(list(model = model.auto, pred = pred.model.auto, confMatrix = rminer::mmetric(testset$diagnosis, pred.model.auto, "ALL"), var = var.model.auto, roc = roc.model.auto))
     }
   }
@@ -321,6 +334,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.gf.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (Gene Filter).pdf", sep = "/"))
         # Part 4.3.1.2.8: Random Forest
         learn.gf.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 201, rf.mtry = 10)
+        # Part 4.3.1.2.9: Soft voting from all the models
+        learn.features.soft <- perform_learning("SOFT", trainset.multinomial, testset.multinomial)
     # Part 4.3.2: PCA Dataset
     data.multinomial <- createDataset(dataSource = data.pp, feature = features.pca, probeset = huex.probes, filename = "PCA")
     # Part 4.1: Compute the alpha using Bonferroni
@@ -351,6 +366,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.pca.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (PCA).pdf", sep = "/"))
         # Part 4.3.2.2.8: Random Forest  (For PCA, SVM tuning had no significant features)
         learn.pca.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 501, rf.mtry = 6)
+        # Part 4.3.2.2.9: Soft voting from all the models
+        learn.features.soft <- perform_learning("SOFT", trainset.multinomial, testset.multinomial)
     # Part 4.3.3: Combined Dataset
     data.multinomial <- createDataset(dataSource = data.pp, feature = features, probeset = huex.probes, filename = "PCA + GF")
     # Part 4.1: Compute the alpha using Bonferroni
@@ -380,7 +397,17 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.3.2.7: Decision Tree
         learn.features.dt <- perform_learning("DT", trainset.multinomial, testset.multinomial, export.filename = paste(exportdir, exportsubdir, "Decision Tree (GF + PCA).pdf", sep = "/"))
         # Part 4.3.3.2.8: Random Forest  
-        learn.features.rf <- perform_learning("RF", trainset.multinomial, testset.multinomial, rf.ntree = 1501, rf.mtry = 10)
-        
+          # Add diagnosis in the important features
+          features.important <- c(learn.features.auto$var$feature, "diagnosis")
+          # Remove the unimportant features
+          data.multinomial.important <- trainset.multinomial[colnames(trainset.multinomial) %in% features.important]
+          # Rebuild the dataset
+          alpha <- get_alpha(alpha, nrow(data.multinomial.important) - 1)
+          sets <- buildTrainTest(data.multinomial.important)
+          trainset.multinomial.important <- sets$trainset
+          testset.multinomial.important <- sets$testset
+          remove(sets)
+        learn.features.rf <- perform_learning("RF", trainset.multinomial.important, testset.multinomial.important, rf.ntree = 500, rf.mtry = 6)
+        # Part 4.3.3.2.9: Soft voting from all the models
         learn.features.soft <- perform_learning("SOFT", trainset.multinomial, testset.multinomial)
         

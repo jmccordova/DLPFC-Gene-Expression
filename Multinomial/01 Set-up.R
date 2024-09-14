@@ -21,7 +21,7 @@ BiocManager::install(
     "RMTstat", "biomaRt", "pROC", "nFactors",
     "EFA.dimensions", 
     "corrplot", "factoextra", "car", 
-    "jsonlite", "glmnet",
+    "jsonlite",
     
     # Part 4: Analysis
     "caret", "e1071", "lattice",  "naivebayes",
