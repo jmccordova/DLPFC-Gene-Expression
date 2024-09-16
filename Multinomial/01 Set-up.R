@@ -33,6 +33,8 @@ BiocManager::install(
     
     # Part 5: Ranking
     "DescTools", "lmtest",
+    
+    # Part 6: Discussion
     "shapper", "lime", 
     "fastshap", "shapviz"
   ), 
@@ -73,6 +75,8 @@ library(caret, lib.loc = package_loc); library(SuperLearner, lib.loc = package_l
 
 # Part 5: Ranking
 library(DescTools, lib.loc = package_loc); library(lmtest, lib.loc = package_loc);
+
+# Part 6: Discussion
 library(shapper, lib.loc = package_loc); library(ranger, lib.loc = package_loc); library(lime, lib.loc = package_loc); 
 library(fastshap, lib.loc = package_loc); library(shapviz, lib.loc = package_loc);
 
