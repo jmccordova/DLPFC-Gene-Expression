@@ -406,6 +406,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
           sets <- buildTrainTest(data.multinomial.important)
           trainset.multinomial.important <- sets$trainset
           testset.multinomial.important <- sets$testset
+          sets <- buildTrainTest(data.multinomial.important)
+          validationset.multinomial.important <- sets$validationset
           remove(sets)
         learn.features.rf <- perform_learning("RF", trainset.multinomial.important, testset.multinomial.important, rf.ntree = 500, rf.mtry = 6)
         # Part 4.3.3.2.9: Soft voting from all the models

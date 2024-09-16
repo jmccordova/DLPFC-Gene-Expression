@@ -32,7 +32,9 @@ BiocManager::install(
     "MASS", "Metrics", "SuperLearner", "ROCR",
     
     # Part 5: Ranking
-    "DescTools", "lmtest"
+    "DescTools", "lmtest",
+    "shapper", "lime", 
+    "fastshap", "shapviz"
   ), 
   force = TRUE, 
   dependencies = TRUE, 
@@ -71,6 +73,8 @@ library(caret, lib.loc = package_loc); library(SuperLearner, lib.loc = package_l
 
 # Part 5: Ranking
 library(DescTools, lib.loc = package_loc); library(lmtest, lib.loc = package_loc);
+library(shapper, lib.loc = package_loc); library(ranger, lib.loc = package_loc); library(lime, lib.loc = package_loc); 
+library(fastshap, lib.loc = package_loc); library(shapviz, lib.loc = package_loc);
 
 # Part 1.3: Initialize cores for parallel processing
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
