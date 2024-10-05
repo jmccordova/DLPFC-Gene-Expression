@@ -336,8 +336,8 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
     sets <- buildTrainTest(data.binomial)
     trainset.binomial <- sets$trainset
     testset.binomial <- sets$testset
-    sets <- buildTrainTest(data.multinomial)
-    validationset.multinomial <- sets$validationset
+    sets <- buildTrainTest(data.binomial)
+    validationset.binomial <- sets$validationset
     remove(sets)
       # Part 4.3.3.1: Perform tuning for SVM and Random Forest
       perform_learning("SVM", trainset.binomial, testset.binomial, tune = TRUE)
@@ -350,7 +350,7 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         # Part 4.3.3.2.3: KNN
         learn.features.knn <- perform_learning("KNN", trainset.binomial, testset.binomial)
         # Part 4.3.3.2.4: SVM
-        learn.features.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'splinedot', svm.cost = 100)
+        learn.features.svm <- perform_learning("SVM", trainset.binomial, testset.binomial, svm.kernel = 'rbfdot', svm.cost = 0.0170484)
         # Part 4.3.3.2.5: Logistic Regression
         learn.features.log <- perform_learning("LOG", trainset.binomial, testset.binomial)
         # Part 4.3.3.2.6: Discriminant Analysis
@@ -361,4 +361,16 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
         learn.features.rf <- perform_learning("RF", trainset.binomial, testset.binomial, rf.ntree = 3201, rf.mtry = 13)
         # Part 4.3.3.2.9: Soft voting from all the models
         learn.features.soft <- perform_learning("SOFT", trainset.binomial, testset.binomial)
+          # Add diagnosis in the important features
+          features.important <- c(learn.features.soft$var$feature, "diagnosis")
+          # Remove the unimportant features
+          data.binomial.important <- trainset.binomial[colnames(trainset.binomial) %in% features.important]
+          # Rebuild the dataset
+          alpha <- get_alpha(alpha, nrow(data.binomial.important) - 1)
+          sets <- buildTrainTest(data.binomial.important)
+          trainset.binomial.important <- sets$trainset
+          testset.binomial.important <- sets$testset
+          sets <- buildTrainTest(data.binomial.important)
+          validationset.binomial.important <- sets$validationset
+          remove(sets)
         
