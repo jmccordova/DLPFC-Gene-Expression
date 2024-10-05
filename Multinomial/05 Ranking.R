@@ -93,66 +93,35 @@ dir.create(paste(exportdir, exportsubdir, sep = "/"), recursive=TRUE)
   # Step 5.5: Get the coefficients in discriminant analysis
   write.csv(coef(learn.features.da$model), paste(exportdir, exportsubdir, "DA (GF + PCA).csv", sep = "/"), row.names = TRUE)
   
-  # Logistic Regression tuning for parsimony
-  matrix <- c()
-  #for(i in seq(1, length(features))) {
-  for(i in seq(1, 3)) {
-    print(i)
-    combinations <- t(data.frame(combn(features, i)))
-    for (j in seq(1, nrow(combinations))) {
-      cols <- c(combinations[j, ], 'diagnosis')
-      trainset <- trainset.multinomial[, cols]
-      testset <- testset.multinomial[, cols]
-      
-      model.logit <- multinom(diagnosis ~ .,
-                              data = trainset,
-                              trace = FALSE)
-      if (i == 1) {
-        testset.newdata <- as.data.frame(testset[, combinations[j, ]])
-        colnames(testset.newdata) <- combinations[j, ]
-      } else {
-        testset.newdata <- testset[, combinations[j, ]]
-      }
-      
-      roc.model.logit <- multiclass.roc(response = testset$diagnosis, 
-                                        predictor = predict(model.logit, 
-                                                            newdata = testset.newdata, 
-                                                            type = "prob"),
-                                        percent = TRUE)
-      
-      # Wald's Z-score for the model
-      #model.logit.z <- summary(model.logit)$coefficients/summary(model.logit)$standard.errors
-      # 2-tailed z test
-      #model.logit.p <- (1 - pnorm(abs(model.logit.z), 0, 1)) * 2
-      
-      # Test the goodness of fit
-      #model.logit.chisq <- chisq.test(trainset$diagnosis, predict(model.logit))
-      
-      # Compute R squared to get model fit
-      model.logit.r2 <- PseudoR2(model.logit, which = c("CoxSnell","Nagelkerke","McFadden"))
-      
-      # Log Likelihood Ratio
-      # lmtest::lrtest(model.logit, "<spacific feature>')
-      
-      matrix <- rbind(matrix, 
-                      c(
-                        roc.model.logit$auc[1], 
-                        model.logit.r2,
-                        paste(cols, sep = '', collapse = ' ')
-                      )
-                )
-    }
-  }
-  matrix <- as.data.frame(matrix)
-  colnames(matrix) <- c("AUC", "CoxSnell","Nagelkerke","McFadden", "Features")
-  write.csv(matrix, paste(exportdir, exportsubdir, "LR Tuning.csv", sep = "/"), row.names = TRUE)
-  remove(matrix, roc.model.logit, model.logit, model.logit.z, model.logit.p, model.logit.r2)
+  # Step 5.6: Listed all feature ranking from Importance, Auto mode, and Softvoting mode
+    # Step 5.6.1: Create matrix containing all features
+    matrix <- c(features,
+                c(sub("feature_", "", learn.features.auto$var$feature), rep("", length(features) - nrow(learn.features.auto$var))),
+                c(sub("feature_", "", learn.features.soft$var$feature), rep("", length(features) - nrow(learn.features.soft$var)))
+              )
+    matrix <- as.data.frame(matrix(matrix, ncol = 3))
+    colnames(matrix) <- c("Features", "Auto", "Soft")
+    # Step 5.6.2: Write into a CSV files
+    write.csv(matrix, paste(exportdir, exportsubdir, "Rminer features.csv", sep = "/"), row.names = TRUE)
   
-  matrix <- c(features,
-              c(sub("feature_", "", learn.features.auto$var$feature), rep("", length(features) - nrow(learn.features.auto$var))),
-              c(sub("feature_", "", learn.features.soft$var$feature), rep("", length(features) - nrow(learn.features.soft$var)))
-            )
-  matrix <- as.data.frame(matrix(matrix, ncol = 3))
-  colnames(matrix) <- c("Features", "Auto", "Soft")
-  write.csv(matrix, paste(exportdir, exportsubdir, "Rminer features.csv", sep = "/"), row.names = TRUE)
+  # Step 5.7: Display common features between multinomial and binomial
+  ggvenn(list('Multinomial' = c("3157311", "3744589", "3352040", "2844453", "3632862", "3134828", "3500787", "2773545", "2406361", "3890913", "2968401", "3005266", "3354095", "3475038", "3337168", "3346453", "2568968", "2674432", "2601230", "3405587"), 
+              'Binomial' = c("3354095", "3302740", "2831519", "3428268", "2804221", "3500787", "3843934", "3155489", "2536508", "3749734", "3699810", "2672467", "2626097", "3157311", "3980614", "3017068", "3048778", "3096512", "2674432", "3556202")
+              ),
+  show_elements = TRUE,
+  label_sep = "\n",
+  text_size = 2.5
+  )
+  
+  # Step 5.8: Display common features across the disorders
+  ggvenn(list('BD' = c("3157311", "3352040", "3556094", "3134828", "3744589", "2385696", "3809690", "3337168", "2844453", "3005266", "2968401", "3405587", "2568968", "2674432", "2406361", "3500787", "3890913", "3780271", "3354095", "3818376"), 
+              'MDD' = c("3157311", "3556094", "3134828", "3352040", "3744589", "3337168", "3890913", "3475038", "3780271", "2844453", "2385696", "2968401", "3632862", "2406361", "3809690", "2531129", "3585272", "3346453", "2601230", "3005266"), 
+              'SCZ' = c("2844453", "3808600", "2674432", "3890913", "2359439", "3780271", "3475038", "2674317", "2568968", "3407583", "2531129", "3556274", "3352040", "2773545", "3104698", "3556202", "3744589", "3708874", "2601230", "3061438"
+              )
+        ),
+        show_elements = TRUE,
+        label_sep = "\n",
+        text_size = 2.5
+  )
+  
   
